@@ -201,8 +201,8 @@ class NaiveInception(nn.Module):
         super().__init__()
 
         self.branch1x1 = BasicConv2d(chn_in= chn1x_in, chn_out= chn1x_out, nxn= 1, pad = 0, dilate= 1) 
-        self.branch3x3 = BasicConv2d(chn_in= chn3x_in, chn_out= chn3x_out, nxn= 3, pad = 1, dilate= 1) 
-        self.branch5x5 = BasicConv2d(chn_in= chn5x_in, chn_out= chn5x_out, nxn= 5, pad = 2, dilate= 1)
+        self.branch3x3 = BasicConv2d(chn_in= chn3x_in, chn_out= chn3x_out, nxn= 3, pad = 2, dilate= 2) 
+        self.branch5x5 = BasicConv2d(chn_in= chn5x_in, chn_out= chn5x_out, nxn= 5, pad = 6, dilate= 3)
         self.branchpool = nn.MaxPool2d(kernel_size = 3, stride = 1, padding=1)
 
     def _forward(self, x: Tensor) -> Tensor:
@@ -210,6 +210,9 @@ class NaiveInception(nn.Module):
         branch3x3 = self.branch3x3(x)
         branch5x5 = self.branch5x5(x)
         branchpool = self.branchpool(x)
+        # print(branch1x1.size())
+        # print(branch3x3.size())
+        # print(branch5x5.size())
         
         outputs = [branch1x1, branch3x3, branch5x5, branchpool]
 
@@ -276,16 +279,16 @@ class Miniception(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(49*32*32, 1000),
+            nn.Linear(61*32*32, 1000),
             nn.ReLU(inplace = True),
             nn.Dropout(),
             nn.Linear(1000, 275),
             nn.ReLU(inplace = True),
             nn.Dropout(),
-            nn.Linear(275, 49),
+            nn.Linear(275, 61),
             nn.ReLU(inplace = True),
             nn.Dropout(),
-            nn.Linear(49, n_classes)
+            nn.Linear(61, n_classes)
         )
 
     def init_weights(m):
@@ -303,7 +306,7 @@ class Miniception(nn.Module):
     def forward(self, x, flag = False):
         x = self.layers(x)
         x_avg = self.avg_pool(x)
-        x = x_avg.view(-1, 49*32*32)
+        x = x_avg.view(-1, 61*32*32)
         x = self.classifier(x)
 
         if flag:

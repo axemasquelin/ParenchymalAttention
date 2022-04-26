@@ -248,8 +248,8 @@ def main():
     class_names = ["Benign", "Malignant"]   # Class Name (1 - Malignant, 0 - Benign)
     gpu_loc = 0                             # Define GPU to use (0 or 1)
     seed = 2020                             # Define Random Seed
-    folds = 1                               # Cross Validation Folds
-    reps = 1                                # Define number of repetition for each test
+    folds = 5                               # Cross Validation Folds
+    reps = 5                               # Define number of repetition for each test
 
     # GPU Initialization
     device = GPU_init(gpu_loc)
