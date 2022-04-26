@@ -1,0 +1,32 @@
+,0
+Number of Individuals,212.0
+Average Age,62.93589743589744
+STD Age,5.319261113588878
+Average Pkyrs,65.82115384615385
+STD Pkyrs,25.615750176266697
+Average Nodule Size,8.94811320754717
+STD Nodule Size,4.329130493612454
+Male Count,45.0
+Female Count,33.0
+Count Xslice,88.0
+Count Yslice,62.0
+Count Zslice,62.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),213.0
+Emphysema,72.0
+Other minor abnormalities,44.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",42.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),42.0
+Benign Lung Nodule(s),38.0
+other potentially significant abnormality above diaphram,11.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),9.0
+Significant Cardiovascular abnormality,8.0
+Pleural thickening or effusion,7.0
+ other potentially significant abnormalities below diaphram,6.0
+"6 or more nodules, not suspicious for cancer",2.0
+Consolidation,2.0
+"Atelectasis, segmental or greater",2.0
+Soft Tissue,154.0
+Ground Glass,28.0
+Mixed,24.0
+Unable to Determine Count,4.0
+Other Tissue Count,3.0
