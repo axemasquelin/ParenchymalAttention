@@ -1,30 +1,33 @@
 ,0
-Number of Individuals,184.0
-Average Age,60.23076923076923
-STD Age,5.046247653912299
-Average Pkyrs,59.02884615384615
-STD Pkyrs,23.865280945662143
-Average Nodule Size,10.843137254901961
-STD Nodule Size,4.784861749390918
-Male Count,18.0
-Female Count,8.0
-Count Xslice,56.0
-Count Yslice,70.0
-Count Zslice,58.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),51.0
-Other minor abnormalities,32.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",30.0
-Emphysema,30.0
-Benign Lung Nodule(s),19.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),9.0
-Pleural thickening or effusion,8.0
- other potentially significant abnormalities below diaphram,7.0
-other potentially significant abnormality above diaphram,4.0
-"Atelectasis, segmental or greater",2.0
-"6 or more nodules, not suspicious for cancer",1.0
+Number of Individuals,444.0
+Average Age,61.44642857142857
+STD Age,4.965040118329697
+Average Pkyrs,59.799107142857146
+STD Pkyrs,25.404384895438515
+Average Nodule Size,10.590551181102363
+STD Nodule Size,4.86215435089051
+Male Count,40.0
+Female Count,16.0
+Count Xslice,126.0
+Count Yslice,162.0
+Count Zslice,156.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),128.0
+Emphysema,81.0
+Other minor abnormalities,67.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",58.0
+Benign Lung Nodule(s),45.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),24.0
+Pleural thickening or effusion,19.0
+Significant Cardiovascular abnormality,16.0
+ other potentially significant abnormalities below diaphram,11.0
+other potentially significant abnormality above diaphram,10.0
+"Atelectasis, segmental or greater",5.0
+"6 or more nodules, not suspicious for cancer",3.0
+"Chest Wall Abnormality (bone destruction, metastisis)",2.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),2.0
 Consolidation,1.0
-Soft Tissue,34.0
-Unable to Determine Count,8.0
-Mixed,4.0
-Ground Glass,4.0
+Soft Tissue,85.0
+Ground Glass,17.0
+Unable to Determine Count,15.0
+Mixed,10.0
 Other Tissue Count,1.0

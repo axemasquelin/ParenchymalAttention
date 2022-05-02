@@ -1,32 +1,33 @@
 ,0
-Number of Individuals,480.0
-Average Age,63.071895424836605
-STD Age,5.221545162471443
-Average Pkyrs,67.4875816993464
-STD Pkyrs,25.28625021695387
-Average Nodule Size,9.821608040201005
-STD Nodule Size,4.515390465960428
-Male Count,87.0
-Female Count,66.0
-Count Xslice,162.0
-Count Yslice,156.0
-Count Zslice,162.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),400.0
-Emphysema,128.0
-Other minor abnormalities,76.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",64.0
-Benign Lung Nodule(s),63.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),63.0
-other potentially significant abnormality above diaphram,21.0
-Significant Cardiovascular abnormality,18.0
-Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),15.0
-Pleural thickening or effusion,13.0
- other potentially significant abnormalities below diaphram,12.0
-"Atelectasis, segmental or greater",4.0
-"6 or more nodules, not suspicious for cancer",3.0
-Consolidation,2.0
-Soft Tissue,293.0
-Ground Glass,60.0
-Mixed,36.0
-Unable to Determine Count,8.0
+Number of Individuals,1074.0
+Average Age,63.254901960784316
+STD Age,5.314677112046517
+Average Pkyrs,64.68235294117648
+STD Pkyrs,24.810018739915176
+Average Nodule Size,9.644412191582003
+STD Nodule Size,4.385474336423888
+Male Count,143.0
+Female Count,112.0
+Count Xslice,354.0
+Count Yslice,354.0
+Count Zslice,366.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),693.0
+Emphysema,210.0
+Other minor abnormalities,134.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),120.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",112.0
+Benign Lung Nodule(s),105.0
+Significant Cardiovascular abnormality,35.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),30.0
+other potentially significant abnormality above diaphram,29.0
+ other potentially significant abnormalities below diaphram,20.0
+Pleural thickening or effusion,16.0
+"6 or more nodules, not suspicious for cancer",8.0
+"Atelectasis, segmental or greater",7.0
+Consolidation,4.0
+"Chest Wall Abnormality (bone destruction, metastisis)",1.0
+Soft Tissue,505.0
+Ground Glass,103.0
+Mixed,62.0
+Unable to Determine Count,20.0
 Other Tissue Count,3.0

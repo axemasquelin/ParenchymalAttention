@@ -1,30 +1,33 @@
 ,0
-Number of Individuals,472.0
-Average Age,61.90909090909091
-STD Age,4.439873148293619
-Average Pkyrs,60.00568181818182
-STD Pkyrs,24.262523057293695
-Average Nodule Size,8.596330275229358
-STD Nodule Size,4.114381430613225
-Male Count,26.0
-Female Count,18.0
-Count Xslice,160.0
-Count Yslice,172.0
-Count Zslice,140.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),109.0
-Other minor abnormalities,60.0
-Benign Lung Nodule(s),34.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",33.0
-Emphysema,32.0
-Pleural thickening or effusion,16.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),16.0
-other potentially significant abnormality above diaphram,13.0
-Significant Cardiovascular abnormality,12.0
- other potentially significant abnormalities below diaphram,10.0
-Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),6.0
-Soft Tissue,81.0
-Ground Glass,16.0
-Mixed,6.0
-Unable to Determine Count,3.0
-Other Tissue Count,2.0
+Number of Individuals,1184.0
+Average Age,61.93069306930693
+STD Age,5.006510612677405
+Average Pkyrs,60.97029702970297
+STD Pkyrs,25.262083423797236
+Average Nodule Size,8.575510204081633
+STD Nodule Size,4.0346110489728515
+Male Count,63.0
+Female Count,38.0
+Count Xslice,432.0
+Count Yslice,400.0
+Count Zslice,352.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),246.0
+Other minor abnormalities,128.0
+Emphysema,101.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",86.0
+Benign Lung Nodule(s),70.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),35.0
+Significant Cardiovascular abnormality,31.0
+Pleural thickening or effusion,25.0
+other potentially significant abnormality above diaphram,20.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),15.0
+ other potentially significant abnormalities below diaphram,14.0
+"6 or more nodules, not suspicious for cancer",3.0
+"Atelectasis, segmental or greater",3.0
+"Chest Wall Abnormality (bone destruction, metastisis)",2.0
+Soft Tissue,184.0
+Ground Glass,39.0
+Mixed,9.0
+Unable to Determine Count,8.0
+Other Tissue Count,5.0
 Fat Count,1.0

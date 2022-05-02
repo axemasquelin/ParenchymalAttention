@@ -11,6 +11,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy.stats
 import os, cv2, glob
 # ---------------------------------------------------------------------------- #
 def resaveAttention(img, image_name, folderpath):
@@ -136,8 +137,30 @@ def eval_MetaData(df_imgs, df_prsn, df_sctimage, df_sctabn, abnormalites = None)
 
     return df
 
+def ttests(diam_arr, pkyr_arr, age_arr):
+    '''
+    '''
+
+    # FP: index 0, FN: index 1, TP: index 2, TN: index 3
+
+    t, p_tnfp = scipy.stats.ttest_ind(diam_arr[0][:], diam_arr[3][:])
+    t, p_tpfn = scipy.stats.ttest_ind(diam_arr[1][:], diam_arr[2][:])
+
+    print('Nodule Diameter TN-FP p-value: %f'%(p_tnfp))
+    print('Nodule Diameter TP-FN p-value: %f'%(p_tpfn))
+
+    t, p_tnfp = scipy.stats.ttest_ind(pkyr_arr[0][:], pkyr_arr[3][:])
+    t, p_tpfn = scipy.stats.ttest_ind(pkyr_arr[1][:], pkyr_arr[2][:])
+
+    print('Packyears TN-FP p-value: %f'%(p_tnfp))
+    print('Packyears TP-FN p-value: %f'%(p_tpfn))
+
+    t, p_tnfp = scipy.stats.ttest_ind(age_arr[0][:], age_arr[3][:])
+    t, p_tpfn = scipy.stats.ttest_ind(age_arr[1][:], age_arr[2][:])
     
-    
+    print('Age TN-FP p-value: %f'%(p_tnfp))
+    print('Age TP-FN p-value: %f'%(p_tpfn))
+
 if __name__ == '__main__':
     methods = [
         'Original/',
@@ -197,7 +220,8 @@ if __name__ == '__main__':
         65:'Other minor abnormalities'
     }
     
-    flag_cv2plt = False
+
+    flag_cv2plt = True
 
     resultspath = os.path.split(os.getcwd())[0] + '/results/'
 
@@ -205,6 +229,9 @@ if __name__ == '__main__':
     files_cohort = glob.glob(folder_cohort + "/*.csv")
     
     for method in methods:
+        diam_arr = []
+        pkyr_arr = []
+        age_arr = []
         for subfolder in subfolders:
             print('Evaluating %s'%(method + subfolder))
             imgfolder = resultspath + method + subfolder
@@ -219,4 +246,11 @@ if __name__ == '__main__':
             df = eval_MetaData(df_imgs, df_prsn, df_sctimage, df_sctabn, abnormalites = Abn_features)
             
             df.to_csv(resultspath + method + 'GradCAM/' + subfolder.split('/')[-2] + '_Information.csv')
-    
+
+            
+            
+            diam_arr.append(df_sctabn['SCT_LONG_DIA'].dropna(axis=0).values)
+            pkyr_arr.append(df_prsn['pkyr'].dropna(axis=0).values)
+            age_arr.append(df_prsn['age'].dropna(axis=0).values)
+
+        ttests(diam_arr, pkyr_arr, age_arr)            

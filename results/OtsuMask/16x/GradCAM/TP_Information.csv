@@ -1,33 +1,33 @@
 ,0
-Number of Individuals,468.0
-Average Age,63.17218543046358
-STD Age,5.173988261040637
-Average Pkyrs,65.59139072847681
-STD Pkyrs,26.335015196242313
-Average Nodule Size,9.928
-STD Nodule Size,4.538326389442732
-Male Count,85.0
-Female Count,66.0
-Count Xslice,154.0
-Count Yslice,154.0
-Count Zslice,160.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),377.0
-Emphysema,131.0
-Other minor abnormalities,77.0
-Benign Lung Nodule(s),70.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),67.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",66.0
-Significant Cardiovascular abnormality,20.0
- other potentially significant abnormalities below diaphram,17.0
-other potentially significant abnormality above diaphram,15.0
-Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),14.0
-Pleural thickening or effusion,7.0
-"6 or more nodules, not suspicious for cancer",4.0
+Number of Individuals,1142.0
+Average Age,63.02290076335878
+STD Age,5.248558494098777
+Average Pkyrs,63.71412213740457
+STD Pkyrs,25.09099438114866
+Average Nodule Size,9.590651558073654
+STD Nodule Size,4.373469061466824
+Male Count,142.0
+Female Count,120.0
+Count Xslice,376.0
+Count Yslice,390.0
+Count Zslice,376.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),710.0
+Emphysema,218.0
+Other minor abnormalities,141.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),133.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",112.0
+Benign Lung Nodule(s),111.0
+Significant Cardiovascular abnormality,34.0
+other potentially significant abnormality above diaphram,33.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),29.0
+ other potentially significant abnormalities below diaphram,25.0
+Pleural thickening or effusion,15.0
+"Atelectasis, segmental or greater",8.0
+"6 or more nodules, not suspicious for cancer",7.0
 Consolidation,3.0
-"Atelectasis, segmental or greater",3.0
 "Chest Wall Abnormality (bone destruction, metastisis)",1.0
-Soft Tissue,268.0
-Ground Glass,57.0
-Mixed,35.0
-Unable to Determine Count,14.0
+Soft Tissue,514.0
+Ground Glass,112.0
+Mixed,59.0
+Unable to Determine Count,22.0
 Other Tissue Count,3.0

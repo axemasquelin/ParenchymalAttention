@@ -1,30 +1,33 @@
 ,0
-Number of Individuals,280.0
-Average Age,62.1578947368421
-STD Age,4.7164250994105625
-Average Pkyrs,60.5328947368421
-STD Pkyrs,21.97389199099384
-Average Nodule Size,9.67032967032967
-STD Nodule Size,4.419791209384708
-Male Count,20.0
-Female Count,18.0
-Count Xslice,92.0
-Count Yslice,98.0
-Count Zslice,90.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),91.0
-Other minor abnormalities,52.0
-Emphysema,45.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",34.0
-Benign Lung Nodule(s),32.0
-Pleural thickening or effusion,16.0
-other potentially significant abnormality above diaphram,11.0
-Significant Cardiovascular abnormality,8.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),8.0
- other potentially significant abnormalities below diaphram,7.0
-Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),3.0
-Soft Tissue,59.0
-Ground Glass,20.0
-Mixed,7.0
+Number of Individuals,768.0
+Average Age,62.57954545454545
+STD Age,5.10289886265717
+Average Pkyrs,59.61079545454545
+STD Pkyrs,23.36165741746534
+Average Nodule Size,9.622727272727273
+STD Nodule Size,4.382242271091418
+Male Count,50.0
+Female Count,38.0
+Count Xslice,246.0
+Count Yslice,256.0
+Count Zslice,266.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),220.0
+Emphysema,115.0
+Other minor abnormalities,106.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",76.0
+Benign Lung Nodule(s),66.0
+Pleural thickening or effusion,26.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),22.0
+Significant Cardiovascular abnormality,15.0
+other potentially significant abnormality above diaphram,14.0
+ other potentially significant abnormalities below diaphram,10.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),8.0
+"Atelectasis, segmental or greater",2.0
+"6 or more nodules, not suspicious for cancer",1.0
+Consolidation,1.0
+Soft Tissue,158.0
+Ground Glass,42.0
+Mixed,10.0
+Unable to Determine Count,7.0
 Other Tissue Count,2.0
-Unable to Determine Count,2.0
 Fat Count,1.0

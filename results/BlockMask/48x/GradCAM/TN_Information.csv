@@ -1,30 +1,33 @@
 ,0
-Number of Individuals,306.0
-Average Age,61.708333333333336
-STD Age,4.831771361804449
-Average Pkyrs,59.5
-STD Pkyrs,27.606709959403144
-Average Nodule Size,8.547169811320755
-STD Nodule Size,4.107057892007597
-Male Count,17.0
-Female Count,7.0
-Count Xslice,102.0
-Count Yslice,110.0
-Count Zslice,94.0
-Non-calcified Nodule or mass (opacity >= 4mm diameter),53.0
-Other minor abnormalities,32.0
-"Reticular or reticulonodular opacities, honeycombing, fibrosis",21.0
-Emphysema,17.0
-Benign Lung Nodule(s),14.0
-Non-calcified micronodule(s) (opacity < 4mm diameter),10.0
-Pleural thickening or effusion,9.0
-Significant Cardiovascular abnormality,7.0
- other potentially significant abnormalities below diaphram,4.0
-other potentially significant abnormality above diaphram,3.0
-Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),3.0
-"6 or more nodules, not suspicious for cancer",1.0
-"Atelectasis, segmental or greater",1.0
-Soft Tissue,44.0
-Ground Glass,6.0
-Mixed,2.0
-Unable to Determine Count,1.0
+Number of Individuals,834.0
+Average Age,61.390243902439025
+STD Age,5.1586104396603005
+Average Pkyrs,58.505487804878044
+STD Pkyrs,23.67769045045886
+Average Nodule Size,8.98857142857143
+STD Nodule Size,4.185344671161547
+Male Count,54.0
+Female Count,28.0
+Count Xslice,292.0
+Count Yslice,288.0
+Count Zslice,254.0
+Non-calcified Nodule or mass (opacity >= 4mm diameter),177.0
+Other minor abnormalities,116.0
+"Reticular or reticulonodular opacities, honeycombing, fibrosis",77.0
+Emphysema,64.0
+Benign Lung Nodule(s),55.0
+Non-calcified micronodule(s) (opacity < 4mm diameter),28.0
+Significant Cardiovascular abnormality,27.0
+Pleural thickening or effusion,22.0
+ other potentially significant abnormalities below diaphram,12.0
+other potentially significant abnormality above diaphram,12.0
+Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis),9.0
+"6 or more nodules, not suspicious for cancer",4.0
+"Chest Wall Abnormality (bone destruction, metastisis)",2.0
+"Atelectasis, segmental or greater",2.0
+Soft Tissue,125.0
+Ground Glass,27.0
+Mixed,13.0
+Unable to Determine Count,8.0
+Other Tissue Count,3.0
+Fat Count,1.0
