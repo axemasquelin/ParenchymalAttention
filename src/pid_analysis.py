@@ -66,10 +66,10 @@ def get_imagedata(imgfiles, flag_cv2plt = False):
         ca.append(imgname.split('_')[4])
         
         image_type = imgfile.split('_')[-1]
-    # print(image_type)
-    if flag_cv2plt:
-        if image_type == 'attention.png':
-            resaveAttention(img, imgfile, imgfolder)
+        # print(image_type)
+        if flag_cv2plt:
+            if image_type == 'attention.png':
+                resaveAttention(img, imgfile, imgfolder)
 
     df_imgs['pid'] = pid
     df_imgs['yr'] = timepoint
