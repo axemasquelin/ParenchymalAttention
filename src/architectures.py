@@ -259,11 +259,11 @@ class Miniception(nn.Module):
             [25, 12, 25, 12, 25, 12]
         ]
 
-        # self.DRconfig=[
-        #     # 1ach_in, 1ach_out, 1b_in, 1b_out, 3ch_in, 3ch_out, 5ch_in, 5ch_out
-        #     [1, 4, 4, 4, 4, 4],
-        #     [16, 8, 8, 12, 8, 12]
-        # ]
+        self.DRconfig=[
+            # 1ach_in, 1ach_out, 1b_in, 1b_out, 3ch_in, 3ch_out, 5ch_in, 5ch_out
+            [1, 4, 1, 4, 1, 4],
+            [13, 15, 13, 15, 13, 15]
+        ]
 
         layers = []
         for c1x_in, c1x_out, c3x_in, c3x_out, c5x_in, c5x_out in self.Naiveconfig:
@@ -279,13 +279,13 @@ class Miniception(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(61*32*32, 1000),
+            nn.Linear(61*32*32, 500),
             nn.ReLU(inplace = True),
-            nn.Dropout(),
-            nn.Linear(1000, 275),
-            nn.ReLU(inplace = True),
-            nn.Dropout(),
-            nn.Linear(275, 61),
+            nn.Dropout(0.6),
+            # nn.Linear(500, 125),
+            # nn.ReLU(inplace = True),
+            # nn.Dropout(),
+            nn.Linear(500, 61),
             nn.ReLU(inplace = True),
             nn.Dropout(),
             nn.Linear(61, n_classes)
