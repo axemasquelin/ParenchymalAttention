@@ -202,9 +202,9 @@ def main():
     # Network Parameters
 
     methods = [
-            'Original',
+            # 'Original',
             'OtsuMask',
-            'BlockMask',
+            # 'BlockMask',
             # 'Random_Otsu',
             # 'RandomBlock'
             ]
