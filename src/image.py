@@ -141,7 +141,7 @@ def showImageCam(img, mask, label, net, dataset, ms = None, title=None, folder =
     cam_img = np.uint8(255 * cam_img)
     cam_img = cv2.resize(cam_img, (64,64))
     
-    heatmap = cv2.applyColorMap(cv2.resize(cam_img, (width, height)), cv2.COLORMAP_JET)
+    heatmap = cv2.applyColorMap(cv2.resize(cam_img, (width, height)), cv2.COLORMAP_VIRIDIS)
     
     im = np.zeros((64,64,3))
     im[:,:,0] = img[0][0]
@@ -157,16 +157,19 @@ def showImageCam(img, mask, label, net, dataset, ms = None, title=None, folder =
     img_heat_plt = cv2.cvtColor(img_heat, cv2.COLOR_BGR2RGB)
     # img_heat = np.interp(img_heat(np.amin(img_heat), np.amax(img_heat)), (0,255))
     
-    # plt.imshow(img_heat, vmin = 150 , vmax = 255)
-    # plt.colorbar()
+    plt.imshow(img_heat_plt, vmin = 150 , vmax = 255)
+    plt.colorbar()
     
     if dataset != "Original":
-        cv2.imwrite(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_attention.png', img_heat)    
+        plt.savefig(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_attention.png')
+        # cv2.imwrite(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_attention.png', img_heat)    
         cv2.imwrite(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_original.png', im)
 
     else:
-
-        cv2.imwrite(resultpath + dataset + folder + title + '_attention.png', img_heat)
+        plt.savefig(resultpath + dataset + folder + title + '_attention.png')
+        # cv2.imwrite(resultpath + dataset + folder + title + '_attention.png', img_heat)
         cv2.imwrite(resultpath + dataset + folder + title + '_original.png', im)
+    
+    plt.close()
 
      
