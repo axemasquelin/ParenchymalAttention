@@ -114,9 +114,9 @@ def getcam(filepath, masksize, net, dataset, device, fileid = None, folder = '/S
         
         x_avg = x_avg.cpu().detach().numpy()
 
-        showImageCam(im, x_avg, label, net, dataset, ms = masksize, title = fileid, folder = folder)
+        showImageCam(im, x_avg, pred, net, dataset, ms = masksize, title = fileid, folder = folder)
 
-def showImageCam(img, mask, label, net, dataset, ms = None, title=None, folder = '/StandardImages/'):
+def showImageCam(img, mask, pred, net, dataset, ms = None, title=None, folder = '/StandardImages/'):
     """
     Definition:
     Input:
@@ -131,7 +131,7 @@ def showImageCam(img, mask, label, net, dataset, ms = None, title=None, folder =
     params = list(net.parameters())
     weight_softmax = np.squeeze(params[-2].cpu().data.numpy())
 
-    if label == 0:
+    if pred == 0:
         cam = weight_softmax[0].dot(mask.reshape((nc, h*w)))
     else:
         cam = weight_softmax[1].dot(mask.reshape((nc, h*w)))

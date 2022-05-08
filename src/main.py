@@ -204,15 +204,15 @@ def main():
     methods = [
             'Original',
             'OtsuMask',
-            'BlockMask',
+            # 'BlockMask',
             # 'Random_Otsu',
             # 'RandomBlock'
             ]
 
     masksizes = [
-                16,
+                # 16,
                 32,
-                48,
+                # 48,
                 64
     ]    
 
