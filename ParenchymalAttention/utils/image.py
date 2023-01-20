@@ -85,7 +85,7 @@ def segmentation_map(im, maskmap):
 
     return thres_img
     
-def getcam(testloader, masksize, net, dataset, device, folder = '/StandardImages/', normalize=True):
+def getcam(testloader, masksize, net, method, device, folder = '/StandardImages/', normalize=True):
     """"
     Description:
     -----------
@@ -95,12 +95,10 @@ def getcam(testloader, masksize, net, dataset, device, folder = '/StandardImages
     """
 
     for i, data in enumerate(testloader):
-        images = data['image']
-        label = data['label']
+        images = data['image'].to(device = device, dtype = torch.float)
+        label = data['label'].to(device = device)
         pids = data['id']
 
-        images = images.to(device=device, dtype=torch.float)
-        label = label.to(device=device)
         
         output, x_avgs = net(images, flag=True)
 
@@ -130,9 +128,9 @@ def getcam(testloader, masksize, net, dataset, device, folder = '/StandardImages
                     folder += 'FN/'
             
             x_avg = x_avgs[i].cpu().detach().numpy()
-            # showImageCam(image, x_avg, prediction, net, dataset, ms = masksize, title = fileid, folder = folder)
+            showImageCam(image, x_avg, prediction, net, method, ms = masksize, title = fileid, folder = folder)
 
-def showImageCam(img, mask, pred, net, dataset, ms = None, title=None, folder = '/StandardImages/'):
+def showImageCam(img, mask, pred, net, method, ms = None, title=None, folder = '/StandardImages/'):
     """"
     Description:
     -----------
@@ -141,7 +139,6 @@ def showImageCam(img, mask, pred, net, dataset, ms = None, title=None, folder = 
     Returns:
     """
     nc, h, w, = mask.shape
-    print(img.shape)
     depth, width, height = img.shape
 
     params = list(net.parameters())
@@ -166,7 +163,7 @@ def showImageCam(img, mask, pred, net, dataset, ms = None, title=None, folder = 
 
     img_heat = heatmap*0.7 + im
 
-    resultpath = os.path.split(os.getcwd())[0] + "/results/"
+    resultpath = os.getcwd() + "/results/"
 
     img_heat *= 255.0/np.amax(img_heat)
     img_heat = np.uint8(img_heat)
@@ -176,15 +173,15 @@ def showImageCam(img, mask, pred, net, dataset, ms = None, title=None, folder = 
     plt.imshow(img_heat_plt, vmin = 150 , vmax = 255)
     plt.colorbar()
     
-    if dataset != "Original":
-        plt.savefig(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_attention.png')
-        # cv2.imwrite(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_attention.png', img_heat)    
-        cv2.imwrite(resultpath + dataset + '/' + str(ms) + 'x' + folder + title + '_original.png', im)
+    if ms != None:
+        plt.savefig(resultpath + method  + str(ms) + 'x' + folder + title + '_attention.png')
+        # cv2.imwrite(resultpath + method + str(ms) + 'x' + folder + title + '_attention.png', img_heat)    
+        cv2.imwrite(resultpath + method + str(ms) + 'x' + folder + title + '_original.png', im)
 
     else:
-        plt.savefig(resultpath + dataset + folder + title + '_attention.png')
-        # cv2.imwrite(resultpath + dataset + folder + title + '_attention.png', img_heat)
-        cv2.imwrite(resultpath + dataset + folder + title + '_original.png', im)
+        plt.savefig(resultpath + method + folder + title + '_attention.png')
+        # cv2.imwrite(resultpath + method + folder + title + '_attention.png', img_heat)
+        cv2.imwrite(resultpath + method + folder + title + '_original.png', im*125)
     
     plt.close()
 

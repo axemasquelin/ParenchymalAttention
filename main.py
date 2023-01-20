@@ -76,7 +76,6 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
     sensitivity =  np.zeros((config['experiment']['folds'],config['experiment']['reps']))
     specificity =  np.zeros((config['experiment']['folds'],config['experiment']['reps']))
     auc_scores = np.zeros((config['experiment']['folds'],config['experiment']['reps']))
-    train_time = np.zeros((config['experiment']['folds'],config['experiment']['reps']))
     
 
     if method != 'Otsu' or method != 'BlockDrop':
@@ -167,20 +166,22 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
                     utils.saveAttentionImg(FPoimg, method, masksize, title= 'AverageFalsePositive_Image')
 
                 if config['flags']['Standards']:
-                    selected_images = [
-                                    '100463_0_x.jpg',  # Benign Nodule
-                                    '100397_0_x.jpg',  # Benign Nodule + Parenchymal abnormalities
-                                    '101606_0_x.jpg',  # Benign Nodule + Plural Wall
-                                    '100012_1_x.jpg',  # Malignant Nodule
-                                    '100570_1_y.jpg',  # Malignant Nodule + Parenchymal abnormalities
-                                    '101692_1_y.jpg',  # Malignant Nodule + Plural Wall
+                    cherryids = [
+                                    '100463_0_x.png',  # Benign Nodule
+                                    '100397_0_x.png',  # Benign Nodule + Parenchymal abnormalities
+                                    '101606_0_x.png',  # Benign Nodule + Plural Wall
+                                    '100012_1_x.png',  # Malignant Nodule
+                                    '100658_1_z.png',  # Malignant Nodule + Parenchymal abnormalities
+                                    '101692_1_y.png',  # Malignant Nodule + Plural Wall
                     ]
-                    for img in selected_images:
-                        imfile = os.path.split(os.getcwd())[0] + '/dataset/' + img
-                        image.getcam(imfile, masksize, net, method, config['device'], fileid = img)
+
+                    df = dataloader.cherrypick(cherryids, filepath= config['experiment']['data'])
+                    cherryset = dataloader.DFLoader(df, method)
+                    cherryloader = torch.utils.data.DataLoader(cherryset, batch_size= 125, shuffle=True)
+                    image.getcam(cherryloader, masksize, net, method, config['device'])
 
 
-                image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
+                # image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
 
             sensitivity[k,r] = sens
             specificity[k,r] = spec
@@ -245,9 +246,6 @@ def main(args, command_line_args):
                 experiment(dataset=dataset, method=method, config=config, masksize=masksize)
         else:
             experiment(dataset=dataset, method=method, config=config, masksize=None)
-            
-
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -255,8 +253,8 @@ def build_parser() -> argparse.ArgumentParser:
     # Experiment Settings
     parser.add_argument('--data', type=str, required=True, help='Absolute path for data directory')
     parser.add_argument('--seed', type=int, default= 2022, help='Random Seed for Initializing Network')
-    parser.add_argument('--reps', type=int, default=1, help='Number of repetition for a given fold')
-    parser.add_argument('--folds', type=int, default=1, help='Number of Folds')
+    parser.add_argument('--reps', type=int, default=5, help='Number of repetition for a given fold')
+    parser.add_argument('--folds', type=int, default=5, help='Number of Folds')
     parser.add_argument('--split', type=tuple, default=(0.7,0.15,0.15), help='Dataset training/validation/testing split')
     parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','MobileNetV1','MobileNetV2'])
     parser.add_argument('--method', type=list, default=['Original','Tumor-Segmentation','Surround-Segmentation'], 
@@ -267,7 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Optimizer Arguments
     parser.add_argument('--loss', type=str, default='entropy')
     parser.add_argument('--optim', type=str, default='Adam')
-    parser.add_argument('--epochs', type=int, default=30)
+    parser.add_argument('--epochs', type=int, default=125)
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--betas',type=tuple, default=(0.9,0.999))
     parser.add_argument('--rho',type=float, default=0.9)
@@ -277,7 +275,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Experiment Flags
     parser.add_argument('--composites', type=bool, default=True, help='Create Composite Images of false negatives, false positives, etc...')
     parser.add_argument('--bestmodel', type=bool, default=True, help='Evaluate Best Model')
-    parser.add_argument('--standards', type=bool, default=False, help='Evaluate Cherry Picked Images')
+    parser.add_argument('--standards', type=bool, default=True, help='Evaluate Cherry Picked Images')
     parser.add_argument('--features', type=bool, default=False, help='Not Implemented')
     parser.add_argument('--concepts', type=bool, default=False, help='Not Implemented')
     parser.add_argument('--params', type=bool, default=True, help='Print number of parameters in Network')

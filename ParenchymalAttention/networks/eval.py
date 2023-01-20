@@ -185,7 +185,7 @@ def test(testloader, net, device, CreateComposites=None):
                 count += 1
 
                 if CreateComposites:
-                    ori_img = np.zeros((64,64,4))
+                    ori_img = np.zeros((64,64,3))
                     ori_img[:,:,:] = images[i].cpu().numpy().T   
     
                 if labels[i] == 1:

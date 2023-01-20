@@ -113,6 +113,24 @@ def resample_df(seed, df, method):
     else:
         print('Error: unknown method')
 
+def cherrypick(fileids:list, filepath:str):
+    """
+    Description:
+    -----------
+    Parameters:
+    -------
+    Returns:
+    """
+    originals = [filepath + 'Original/' + x for x in fileids]
+    segmented = [filepath + 'Segmented/' + x for x in fileids]
+    pid = [x.split('_')[0] for x in fileids]
+    ca = [x.split('_')[1] for x in fileids]
+    sliceview = [x.split('_')[2] for x in fileids]
+
+    df = pd.DataFrame(np.transpose([originals, segmented, pid, ca, sliceview]), columns=['uri','segmented_uri', 'pid', 'ca', 'sliceview'])
+    df['ca'] = df['ca'].astype(int)
+    return df
+
 def load_files(config):
     """
     Description:

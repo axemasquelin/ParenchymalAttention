@@ -81,11 +81,12 @@ def saveAttentionImg(img_list, method, ms, heatmap = False, title = None):
     --------
     Returns:
     """ 
+
     w = 64 #img_list[0].shape[0]
     h = 64 #img_list[0].shape[1]
-    d = 4 #img_list[0].shape[2]
+    d = 3 #img_list[0].shape[2]
     img = np.zeros((w,h,d))
-
+    
     if len(img_list) != 0:
         for i in range(len(img_list)):
             img += img_list[i]
@@ -102,7 +103,7 @@ def saveAttentionImg(img_list, method, ms, heatmap = False, title = None):
             else:
                 pth_to_save = os.getcwd()+ "/results/" + method + '/Composites/' + title + '.png'
 
-        cv2.imwrite(pth_to_save, img*255)
+        cv2.imwrite(pth_to_save, img*125)
 
         
 def create_directories(config):
