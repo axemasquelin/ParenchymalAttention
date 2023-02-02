@@ -3,7 +3,13 @@
 '''
     Project: Parenchymal Attention Network
     Authors: Axel Masquelin
-    Description:
+    ---------------------------------------
+    Functions related to pytorch dataloader and generating dataframe for dataloader.
+    Includes inference dataloader (InferLoader), Nrrd dataloader (NrrdLoader) and a
+    csv dataloader (CsvLoader). Image information and location is expected to exist in a 
+    csv file, and include a 'uri' column (original image filepath), segmented_uri (segmentation maps filepath)
+    pid (patient identifier), and ca (classification).
+
 '''
 # Dependencies
 # ---------------------------------------------------------------------------- #
@@ -12,14 +18,17 @@ from sklearn.utils import resample
 from PIL import Image, ImageOps
 import pandas as pd
 import numpy as np
+import random
 import glob
+import nrrd
 import os
 import cv2
 
 import ParenchymalAttention.utils.image as image 
+import ParenchymalAttention.data.preprocess as prep
 # ---------------------------------------------------------------------------- #
-
-def seg_method(im, maskmap= None, method='Segmented', masksize=None):
+   
+def load_files(config):
     """
     Description:
     -----------
@@ -27,54 +36,10 @@ def seg_method(im, maskmap= None, method='Segmented', masksize=None):
     --------
     Returns:
     """
+    df = pd.read_csv(config['experiment']['data'])
+    df = resample_df(config['experiment']['seed'], df, 2)
     
-    if method == 'OtsuMask':
-        thres_img = image.otsu_algo(im, masksize)
-    
-    if method == 'BlockMask':
-        thres_img = image.block_algo(im, masksize)
-
-    if method =='Tumor-Segmentation':
-        thres_img = image.segmentation_map(im, maskmap)
-
-    if method =='Surround-Segmentation':
-        maskmap = 1-maskmap
-        thres_img = image.segmentation_map(im, maskmap)
-
-    return thres_img
-
-def normalize_img(img, normalization: str):
-    '''
-    Description:
-    ----------
-    Parameters:
-    img - np.array
-        raw image from nrrd file
-    -------
-    Outputs:
-    img - np.array
-        array containing a slice of the image
-    '''
-    # print(img[0,:,:])
-    if normalization == 'norm':
-        img = (img - img.min())/(img.max()-img.min())
-
-    if normalization == 'stand':
-        pixelmean = img.mean()
-        pixelstd = img.std()
-        img = (img - pixelmean)/(pixelstd)
-        img = (img - img.min())/(img.max()-img.min())
-
-    if normalization == 'lognorm':
-        img = (np.log10(img) - np.log10(img).min())/(np.log10(img).max()-np.log10(img).min())
-
-    if normalization == 'logstand':
-        pixelmean = np.log10(img).mean()
-        pixelstd = np.log10(img).std()
-        img = (np.log10(img)-pixelmean)/pixelstd
-
-    return img
-
+    return df
 
 def resample_df(seed, df, method):
     '''
@@ -125,48 +90,56 @@ def cherrypick(fileids:list, filepath:str):
     segmented = [filepath + 'Segmented/' + x for x in fileids]
     pid = [x.split('_')[0] for x in fileids]
     ca = [x.split('_')[1] for x in fileids]
-    sliceview = [x.split('_')[2] for x in fileids]
+    dims = [np.asarray(Image.open(x)).shape for x in originals]
+    sliceview = [x.split('_')[2].split('.')[0] for x in fileids]
 
-    df = pd.DataFrame(np.transpose([originals, segmented, pid, ca, sliceview]), columns=['uri','segmented_uri', 'pid', 'ca', 'sliceview'])
+    df = pd.DataFrame(np.transpose([originals, segmented, pid, ca, sliceview, dims]), columns=['uri','segmented_uri', 'pid', 'ca', 'sliceview', 'dimension'])
+    df = df[df.dimension == (64,64,4)]
+    print(df)
     df['ca'] = df['ca'].astype(int)
+
     return df
 
-def load_files(config):
+
+
+def inference_views(df:pd.DataFrame):
+
+    for index in df.index:
+        row = df.iloc[index]
+        dim = [row['xdim'], row['ydim'], row['zdim']]
+        x = [row['x_min'], row['x_max']]
+        y = [row['y_min'], row['y_max']]
+        z = [row['z_min'], row['z_max']]
+
+
+    return df
+
+def augment_dataframe(df, upsample:int=3,  augment:str='rand'):
     """
-    Description:
+    Creates an augmented dataframe that randomly augments the dataset by taking slices adjacent to central slices, or takes all surrounding slices. 
     -----------
     Parameters:
+    df - pandas.dataframe()
+    upsample - int
+        Number of slices to augment the dataset by
+    augment - str
+        type of augmentation employed by the function. Random will randomly select slices from the images
     --------
     Returns:
+    df - pandas.dataframe()
     """
 
-    # Loading Original Data
-    filelist = glob.glob(config['experiment']['data'] + 'Original/*.png')  
-    pid = [os.path.basename(filename).split('_')[0] for filename in filelist]
-    ca = [os.path.basename(filename).split('_')[1] for filename in filelist]
-    sliceview = [os.path.basename(filename).split('_')[2].split('.')[0] for filename in filelist]
-    dims = [np.asarray(Image.open(x)).shape for x in filelist]
-    df = pd.DataFrame(np.transpose([pid,ca,sliceview, dims, filelist]), columns=['pid','ca','sliceview', 'dimension','uri'])
-
-    # Loading Segmented Filenames
-    filelist = glob.glob(config['experiment']['data'] + 'Segmented/*.png')
-    pid = [os.path.basename(filename).split('_')[0] for filename in filelist]
-    sliceview = [os.path.basename(filename).split('_')[2].split('.')[0] for filename in filelist]
-    dims = [np.asarray(Image.open(x)).shape for x in filelist]
-    df2 = pd.DataFrame(np.transpose([pid,sliceview,dims, filelist]), columns=['pid','sliceview','seg_dimension','segmented_uri'])
-
-    df = df.merge(df2, how='right', on=['pid','sliceview'])
-    df['ca'] = df['ca'].astype(int)
-    df = df[df.dimension == (64,64,4)]
-    df = df[df.seg_dimension == (64,64,4)]
-    df = resample_df(config['experiment']['seed'], df, 2)
-
+    if augment=='rand':
+        df.loc[df.index.repeat(df.pid)].reset_index(drop=True)    
+        df['view'] = [np.random.choice(['x','y','z'] for index in df.index)]
+    else:
+        sliceloc = inference_views(df)
+        df.loc[df.index.repeat(df.pid)].reset_index(drop=True)  
     return df
-
 class DFLoader(Dataset):
     """
     """
-    def __init__(self, data, method= None, augmentations=None, masksize=None, norms='stand'):
+    def __init__(self, data, method= None, augmentations=None, masksize=None, norms='norm'):
         super().__init__()
         self.data = data
         self.augment= augmentations
@@ -182,24 +155,68 @@ class DFLoader(Dataset):
         img = Image.open(row['uri'])
         img = np.asarray(img).T     
 
-        maskmap = Image.open(row['segmented_uri'])
+        # maskmap = Image.open(row['segmented_uri'])
         maskmap = np.asarray(maskmap).T
 
         label = row['ca']
         im = np.zeros((1,64,64))
         if self.method != 'Original':
             im[0,:,:] = img[0,:,:]
-            img = normalize_img(im, self.norms)
-            img = seg_method(img, maskmap=maskmap, method= self.method, masksize = self.masksize)
+            img = prep.normalize_img(im, self.norms)
+            img = prep.seg_method(img, maskmap=maskmap, method= self.method, masksize = self.masksize)
             sample = {'image': img,
                     'label': label,
                     'id': row['pid']}
 
         else:
             im[0,:,:] = img[0,:,:]
-            sample = {'image': normalize_img(im, self.norms),
+            sample = {'image': prep.normalize_img(im, self.norms),
                       'label': label,
                       'id': row['pid']}
 
         return sample         
+
+class NrrdLoader(Dataset):
+    """
+    Custom Nrrd file Dataloader class for pytorch; Will utilize raw and segmented Nrrd files to select random
+    regions of the image for analysis.
+    """
+    def __init__(self, data, method:str=None, augmentation:str=None, masksize:int=None, norms:str='norm'):
+        super().__init__()
+        self.data = data
+        self.augment = augmentation
+        self.masksize = masksize
+        self.norms = norms
+        self.method = method
+
+    def __len__(self)->int:
+        return len(self.data)
+
+    def __getitem__(self, index:int):
+        row = self.data.iloc[index]
+        img = nrrd.read(row['uri'])
+        thres = nrrd.read(row['thresh_uri'])
+        print(img)
+        print(img[0].shape)
+        print(thres[0].shape)
+
+        if row['augment'] == 'rand':
+            if row.view == 'x':
+                slice_idx = np.random.choice(np.arange(row['x_min'],row['x_max']))
+
+            elif row.view == 'y':
+                slice_idx = np.random.choice(np.arange(row['y_min'],row['y_max']))
+
+            else:
+                slice_idx = np.random.choice(np.arange(row['z_min'],row['z_max']))
+
+        elif row['augment'] == 'infer':
+            pass
+        else:
+
+            sample = {'image': prep.normalize_img(img, self.norms),
+                'label': row['ca'],
+                'id': row['pid']}
+            
+        return sample
 

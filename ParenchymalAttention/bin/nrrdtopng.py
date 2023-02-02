@@ -195,6 +195,7 @@ def main(args, command_line_args):
 
         except:
             print("WARNING: Error Loading files for Pid - %s"%row['pid'])
+            break
     
 def build_parser() -> argparse.ArgumentParser:
     """

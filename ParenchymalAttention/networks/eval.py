@@ -38,6 +38,8 @@ def optim_criterion_select(net, opt):
     # Define Optimizer
     if opt['optimizer'] == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr = opt['lr'], betas= opt['betas'], eps= opt['eps'])
+    if opt['optimizer'] == 'AdamW':
+        optimizer = optim.AdamW(net.parameters(), lr = opt['lr'], betas= opt['betas'], eps= opt['eps'], weight_decay=0.01)
     if opt['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr= opt['lr'], momentum= opt['momentum'])
     if opt['optimizer'] == 'Adadelta':
@@ -64,7 +66,6 @@ def train(trainloader, valloader, net, progressbar, config):
     for epoch in range(config['opt']['epochs']):  # loop over the dataset multiple times
         progressbar.visual(epoch, config['opt']['epochs'])
 
-        EpochTime = 0       # Zeroing Epoch Timer
         running_loss = 0.0  # Zeroing Running Loss per epoch
         total = 0           # Zeroing total images processed
         correct = 0         # Zeroing total classes correct
@@ -74,6 +75,7 @@ def train(trainloader, valloader, net, progressbar, config):
             # Input
             images = data['image'].to(device = config['device'], dtype = torch.float)
             labels = data['label'].to(device = config['device'])
+
             # print(images.shape)
             images = torch.autograd.Variable(images)
             labels = torch.autograd.Variable(labels)
@@ -100,8 +102,6 @@ def train(trainloader, valloader, net, progressbar, config):
         
         validLoss[epoch], validAcc[epoch] = validate(valloader, criterion, net, config['device'])
               
-        running_loss = 0.0
-
     return {'Trainingloss': trainLoss,
             'Validationloss': validLoss,
             'TrainingAccuracy':trainAcc,
@@ -185,7 +185,7 @@ def test(testloader, net, device, CreateComposites=None):
                 count += 1
 
                 if CreateComposites:
-                    ori_img = np.zeros((64,64,3))
+                    ori_img = np.zeros((64,64,1))
                     ori_img[:,:,:] = images[i].cpu().numpy().T   
     
                 if labels[i] == 1:

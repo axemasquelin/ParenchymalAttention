@@ -29,26 +29,34 @@ from ParenchymalAttention.utils import metrics
 def GPU_init(loc):
     """
     Definition: GPU Initialization function
-    Inputs: loc - 0 or 1 depending on which GPU is being utilized
-    Outputs: check_gpu - gpu enabled variable
+    -----------
+    Parameters:
+    loc - int
+        0 or 1 depending on which gpu is being utilized. In the case of a bridge, it is possible to further parallerize the network
+    --------
+    Returns:
+    check_gpu - int
+        gpu enable variable that will be utilized as the device/location we are sending data to.
     """
-    check_gpu = torch.device("cuda:" + str(loc) if torch.cuda.is_available() else "cpu")
+    check_gpu = torch.device("cuda:" + str(loc) if torch.cuda.is_available() else "cpu")    # torch.device defines whether a gpu is used or cpu depending on availability of gpus
     print("Available Device: " + str(check_gpu))
     
     return check_gpu
 
 def net_select(model):
     """
-    Description: Network selection function
-    Input: model - string that defines which model will be used
-    Output: net - loaded network
+    Network selection function customized to allow initialization from scratch of custom network architectures.
+    -----------
+    Parameters:
+    model - string
+        defines which model will be used based on predefined architectures names and if statement
+    --------
+    Returns:
+    net - class 
+        class containing the parameters and information of the network. Check architecture.py for further information on custom networks
     """
-    if (model == 'MobileNet1'):
-        net = architectures.MobileNetV1()
-        net.init_weights()
-    
-    elif (model == 'MobileNet2'):
-        net = architectures.MobileNetV2()
+    if (model == 'MiniUnet'):
+        net = architectures.MiniUnet
         net.init_weights()
     
     elif (model == "Miniception"):
@@ -62,9 +70,23 @@ def net_select(model):
 
 def experiment(dataset:object, method:str, config:object, masksize:int):
     """
-    Description:
+    Function controlling all experiment component of defined by the parsed function call. The experiment function does not return anything to the main function.
+    At the place, it will save all results for the given methodology to its respective result folder(s). See github repo to ensure proper directories exists.
+    TODO: automatically create expected results directories if not present. 
     -----------
     Parameters:
+    dataset - pd.dataframe
+        contains a dataframe with the filename(s), classification(s), and other metrics of interest by the user. 
+        The dataframe is created when calling dataframe.load_files() and can be viewed in 
+        /ParenchymalAttention/data/dataloader.py
+    method - string
+        containes experiment information regarding which method is currently being evaluated and applied to the input images.
+        In the case of these experiment, the options include Original image, Otsu algo, DropBloc algo, and Segmentation Masks. 
+    config - set
+        contains the experiment configuration and network hyperparameters that user defines in function call. See build_parser() function
+        or main()
+    masksize - int
+        integer defining how much of the image will be removed when applying the Otsu algorithm, or DropBlock algorithm.
     """
     # Initializing One-off variables
     best_acc = 0
@@ -94,7 +116,7 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
 
     for k in range(config['experiment']['folds']):
         df_train, df_test = train_test_split(dataset, test_size= config['experiment']['split'][2], random_state = k)
-        df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
+        # df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
                 
         fprs, tprs = [], []
 
@@ -111,14 +133,18 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
             bar.info()
 
             # Load Training Dataset
-            trainset = dataloader.DFLoader(df_train, method=method)
+            # print(f'\n Training Data: {df_train.shape} \
+                    # \n Validation Data: {df_val.shape} \
+                    # \n Testing Data: {df_test.shape}')
+
+            trainset = dataloader.NrrdLoader(df_train, method=method)
             trainloader = torch.utils.data.DataLoader(trainset, batch_size= 125, shuffle= True)
 
-            valset = dataloader.DFLoader(df_val, method=method)
+            valset = dataloader.NrrdLoader(df_test, method=method)
             valloader = torch.utils.data.DataLoader(valset, batch_size= 125, shuffle= True)
             
             #Load testing Dataset
-            testset = dataloader.DFLoader(df_test, method=method)
+            testset = dataloader.NrrdLoader(df_test, method=method)
             testloader = torch.utils.data.DataLoader(testset, batch_size= 125, shuffle= True)
 
             output = eval.train(trainloader, valloader, net, bar, config)
@@ -181,7 +207,7 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
                     image.getcam(cherryloader, masksize, net, method, config['device'])
 
 
-                # image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
+                image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
 
             sensitivity[k,r] = sens
             specificity[k,r] = spec
@@ -197,7 +223,17 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
 
 
 def main(args, command_line_args):
-
+    """
+    Main.py controls all experiments for the Parenchymal Attention research. In this project, we aim to gain
+    inisghts at how CNNs explore low dose computed tomography (LDCT) images in order to identify malignant and
+    benign nodules between 4mm-20mm in diameter. This code can be repurposed to any tasks by simply changing
+    the provided input data
+    -----------
+    Parameters:
+    args - dictionary
+        containing input arguments either from command_line inputs or TODO from provided yaml experiment file
+    
+    """
     # Network Parameters
     config= {
         'device': GPU_init(0),
@@ -252,11 +288,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Experiment Settings
     parser.add_argument('--data', type=str, required=True, help='Absolute path for data directory')
-    parser.add_argument('--seed', type=int, default= 2022, help='Random Seed for Initializing Network')
-    parser.add_argument('--reps', type=int, default=5, help='Number of repetition for a given fold')
-    parser.add_argument('--folds', type=int, default=5, help='Number of Folds')
-    parser.add_argument('--split', type=tuple, default=(0.7,0.15,0.15), help='Dataset training/validation/testing split')
-    parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','MobileNetV1','MobileNetV2'])
+    parser.add_argument('--seed', type=int, default= 2020, help='Random Seed for Initializing Network')
+    parser.add_argument('--reps', type=int, default=2, help='Number of repetition for a given fold')
+    parser.add_argument('--folds', type=int, default=2, help='Number of Folds')
+    parser.add_argument('--split', type=tuple, default=(0.7,0.1,0.2), help='Dataset training/validation/testing split')
+    parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','MiniUnet'])
     parser.add_argument('--method', type=list, default=['Original','Tumor-Segmentation','Surround-Segmentation'], 
                         choices=['Original','Tumor-Segmentation','Surround-Segmentation','Otsu','DropBlock'])
     parser.add_argument('--masksize', type=list, default=[16,32,48,64], help='Size of area that will be blocked using Otsu or DropBlock')
@@ -264,18 +300,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Optimizer Arguments
     parser.add_argument('--loss', type=str, default='entropy')
-    parser.add_argument('--optim', type=str, default='Adam')
-    parser.add_argument('--epochs', type=int, default=125)
-    parser.add_argument('--lr', type=float, default=0.0001)
-    parser.add_argument('--betas',type=tuple, default=(0.9,0.999))
+    parser.add_argument('--optim', type=str, default='AdamW')
+    parser.add_argument('--epochs', type=int, default=75)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--betas',type=tuple, default=(0.85,0.955))
     parser.add_argument('--rho',type=float, default=0.9)
-    parser.add_argument('--eps', type=float, default=1e-10)
+    parser.add_argument('--eps', type=float, default=1e-15)
     parser.add_argument('--decay', type=float, default=0.001)
     parser.add_argument('--momentum', type=float, default=0.99)
     # Experiment Flags
     parser.add_argument('--composites', type=bool, default=True, help='Create Composite Images of false negatives, false positives, etc...')
     parser.add_argument('--bestmodel', type=bool, default=True, help='Evaluate Best Model')
-    parser.add_argument('--standards', type=bool, default=True, help='Evaluate Cherry Picked Images')
+    parser.add_argument('--standards', type=bool, default=False, help='Evaluate Cherry Picked Images')
     parser.add_argument('--features', type=bool, default=False, help='Not Implemented')
     parser.add_argument('--concepts', type=bool, default=False, help='Not Implemented')
     parser.add_argument('--params', type=bool, default=True, help='Print number of parameters in Network')
