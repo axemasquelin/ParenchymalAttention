@@ -22,6 +22,8 @@ import torch
 import numpy as np
 import ParenchymalAttention.utils.utils as utils
 # ---------------------------------------------------------------------------- #
+
+
 class BasicConv2d(nn.Module):
     def __init__(self, channel_in: int, channel_out: int, nxn: int, pad: int=1, stride: int=1, dilate: int=1):
         super().__init__()
@@ -35,8 +37,6 @@ class BasicConv2d(nn.Module):
         x = self.Conv(x)
         x = self.BatchNorm(x)
         return self.ReLu(x)
-
-
 class NaiveInception(nn.Module):
     def __init__(self, chn1x_in: int, chn1x_out: int,
                 chn3x_in: int, chn3x_out: int,
@@ -117,8 +117,8 @@ class Miniception(nn.Module):
             # Chn1xa_in, chn1xa_out, chn3xa_out, chn3xb_out, chn1xb_in, chn1xb_out, chnblock_out
             [1, 3, 5, 7, 15, 16],
             [16, 12, 24, 36, 50, 66],
-            [66, 12, 24, 36, 50, 116],
-            [116, 12, 24, 36, 50, 125],
+            # [66, 12, 24, 36, 50, 116],
+            # [116, 12, 24, 36, 50, 125],
         ]
 
         layers = []

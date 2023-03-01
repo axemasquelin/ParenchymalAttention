@@ -57,7 +57,7 @@ def net_select(model):
     """
     if (model == 'MiniUnet'):
         net = architectures.MiniUnet
-        net.init_weights()
+        net.apply(net.init_weights)
     
     elif (model == "Miniception"):
         net = architectures.Miniception()
@@ -67,6 +67,7 @@ def net_select(model):
         print("Warning: Model Not Found")
     
     return net
+    
 
 def experiment(dataset:object, method:str, config:object, masksize:int):
     """
@@ -116,8 +117,16 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
 
     for k in range(config['experiment']['folds']):
         df_train, df_test = train_test_split(dataset, test_size= config['experiment']['split'][2], random_state = k)
-        # df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
-                
+        df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
+
+        # print(f"Malignant: {len(df_train[df_train.ca==1])} | Benign: {len(df_train[df_train.ca==0])}")
+        # print(f"Malignant: {len(df_val[df_val.ca==1])} | Benign: {len(df_val[df_val.ca==0])}")
+        # print(f"Malignant: {len(df_test[df_test.ca==1])} | Benign: {len(df_test[df_test.ca==0])}")
+        
+        df_train = dataloader.augment_dataframe(df_train, upsample=16, augment='rand')
+        df_val = dataloader.augment_dataframe(df_val, upsample=16, augment='rand')
+        df_test = dataloader.augment_dataframe(df_test, upsample=3, augment='infer')
+
         fprs, tprs = [], []
 
         for r in range(config['experiment']['reps']):
@@ -130,25 +139,20 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
             if config['flags']['Params'] and k==0 and r==0:
                 utils.check_parameters([net], params={'model': [config['experiment']['model']]})
 
-            bar.info()
-
             # Load Training Dataset
-            # print(f'\n Training Data: {df_train.shape} \
-                    # \n Validation Data: {df_val.shape} \
-                    # \n Testing Data: {df_test.shape}')
-
-            trainset = dataloader.NrrdLoader(df_train, method=method)
-            trainloader = torch.utils.data.DataLoader(trainset, batch_size= 125, shuffle= True)
-
-            valset = dataloader.NrrdLoader(df_test, method=method)
-            valloader = torch.utils.data.DataLoader(valset, batch_size= 125, shuffle= True)
+            trainset = dataloader.NPYLoader(df_train, method=method)
+            trainloader = torch.utils.data.DataLoader(trainset, batch_size= 75, shuffle= True)
             
+            valset = dataloader.NPYLoader(df_val, method=method)
+            valloader = torch.utils.data.DataLoader(valset, batch_size= 75, shuffle= True)
+
             #Load testing Dataset
-            testset = dataloader.NrrdLoader(df_test, method=method)
-            testloader = torch.utils.data.DataLoader(testset, batch_size= 125, shuffle= True)
+            testset = dataloader.NPYLoader(df_test, method=method, testing=True)
+            testloader = torch.utils.data.DataLoader(testset, batch_size= 75, shuffle= True)
 
             output = eval.train(trainloader, valloader, net, bar, config)
-            
+            print(output['TrainingAccuracy'])
+            print(output['Trainingloss'])
             trainloss.append(output['Trainingloss'])
             valloss.append(output['Validationloss'])
             trainacc.append(output['TrainingAccuracy'])
@@ -191,22 +195,7 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
                     utils.saveAttentionImg(FNoimg, method, masksize, title= 'AverageFalseNegative_Image')
                     utils.saveAttentionImg(FPoimg, method, masksize, title= 'AverageFalsePositive_Image')
 
-                if config['flags']['Standards']:
-                    cherryids = [
-                                    '100463_0_x.png',  # Benign Nodule
-                                    '100397_0_x.png',  # Benign Nodule + Parenchymal abnormalities
-                                    '101606_0_x.png',  # Benign Nodule + Plural Wall
-                                    '100012_1_x.png',  # Malignant Nodule
-                                    '100658_1_z.png',  # Malignant Nodule + Parenchymal abnormalities
-                                    '101692_1_y.png',  # Malignant Nodule + Plural Wall
-                    ]
-
-                    df = dataloader.cherrypick(cherryids, filepath= config['experiment']['data'])
-                    cherryset = dataloader.DFLoader(df, method)
-                    cherryloader = torch.utils.data.DataLoader(cherryset, batch_size= 125, shuffle=True)
-                    image.getcam(cherryloader, masksize, net, method, config['device'])
-
-
+                
                 image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
 
             sensitivity[k,r] = sens
@@ -231,7 +220,7 @@ def main(args, command_line_args):
     -----------
     Parameters:
     args - dictionary
-        containing input arguments either from command_line inputs or TODO from provided yaml experiment file
+        ***containing input arguments either from command_line inputs or TODO from provided yaml experiment file
     
     """
     # Network Parameters
@@ -274,7 +263,7 @@ def main(args, command_line_args):
 
     sys.stdout.write('\n\r {0}\n Loading User data from: {1}\n {0}\n '.format('='*(24 + len(config['experiment']['data'])), config['experiment']['data']))
     
-    dataset = dataloader.load_files(config)
+    dataset = dataloader.load_files(config, ext='.npy')
 
     for method in config['experiment']['method']:
         if method== 'Otsu' or method=='DropBlock':
@@ -289,21 +278,24 @@ def build_parser() -> argparse.ArgumentParser:
     # Experiment Settings
     parser.add_argument('--data', type=str, required=True, help='Absolute path for data directory')
     parser.add_argument('--seed', type=int, default= 2020, help='Random Seed for Initializing Network')
-    parser.add_argument('--reps', type=int, default=2, help='Number of repetition for a given fold')
-    parser.add_argument('--folds', type=int, default=2, help='Number of Folds')
+    parser.add_argument('--reps', type=int, default=10, help='Number of repetition for a given fold')
+    parser.add_argument('--folds', type=int, default=10, help='Number of Folds')
     parser.add_argument('--split', type=tuple, default=(0.7,0.1,0.2), help='Dataset training/validation/testing split')
     parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','MiniUnet'])
-    parser.add_argument('--method', type=list, default=['Original','Tumor-Segmentation','Surround-Segmentation'], 
-                        choices=['Original','Tumor-Segmentation','Surround-Segmentation','Otsu','DropBlock'])
+    parser.add_argument('--method', type=list, default=['Original'],
+                        # ['Tumor-Segmentation','Surround-Segmentation'], 
+                        # choices=['Original','Tumor-Segmentation','Surround-Segmentation','Otsu','DropBlock'])
+                        # choices=['Tumor-Segmentation','Surround-Segmentation']
+    )
     parser.add_argument('--masksize', type=list, default=[16,32,48,64], help='Size of area that will be blocked using Otsu or DropBlock')
     parser.add_argument('--classes', type=list, default=['Benign','Malignant'])
 
     # Optimizer Arguments
     parser.add_argument('--loss', type=str, default='entropy')
-    parser.add_argument('--optim', type=str, default='AdamW')
+    parser.add_argument('--optim', type=str, default='Adam')
     parser.add_argument('--epochs', type=int, default=75)
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--betas',type=tuple, default=(0.85,0.955))
+    parser.add_argument('--betas',type=tuple, default=(0.9,0.999))
     parser.add_argument('--rho',type=float, default=0.9)
     parser.add_argument('--eps', type=float, default=1e-15)
     parser.add_argument('--decay', type=float, default=0.001)

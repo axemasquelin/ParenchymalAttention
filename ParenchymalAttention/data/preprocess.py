@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 import glob
 import nrrd
+import math
 import os
 import cv2
 
@@ -106,9 +107,10 @@ def segmentation_map(im, maskmap):
     --------
     Returns:
     """
-    # print(im.shape)
+    
     thres_img = np.zeros(im.shape)
-    # print(thres_img.shape)
+    # print(im.shape)
+    # print(maskmap.shape)
     for i in range(im.shape[0]):
         thres_img[i,:,:] = im[i,:,:] * maskmap[0]
 
@@ -127,6 +129,7 @@ def normalize_img(img, normalization: str):
         array containing a slice of the imag
     '''
     # print(img[0,:,:])
+    img += abs(img.min())
     if normalization == 'norm':
         img = (img - img.min())/(img.max()-img.min())
 
@@ -146,47 +149,80 @@ def normalize_img(img, normalization: str):
 
     return img
 
-def create_bounds(arr, window_size = 64):
-    pass
-
-
-def scan_3darray(arr, threshold= 1):
+def get_dims(df:pd.DataFrame, augment:str):
     """
-    Description:
+    Get slice view of Nrrd file
     -----------
     Parameters:
-    arr - np.array()
-    threshold - int
-        Value to identify edges of masks
+    df - pd.Dataframe
+        Panda dataframe containing paths for original nrrd and segmented nrrd
+    augment - str
+        string describing whether augmentation is random or inference
+            random: randomly selects a slice based on a location
+            central: repeats pattern to ensure selection of nearby centroid slices
+    --------
+    Returns:
+    """
+    slice_idx = np.zeros(len(df))
+    bound1_lower = np.zeros(len(df))
+    bound1_upper = np.zeros(len(df))
+    bound2_lower = np.zeros(len(df))
+    bound2_upper = np.zeros(len(df))
+
+    for index in df.index:
+        row = df.iloc[index]
+        dim = [row['xdim'], row['ydim'], row['zdim']]
+        roi = create_roi(row, dim, window_size=64)
+        
+        if row['view'] == 'x':
+            slice_idx[index] = np.random.choice(np.arange(roi['Xmin'],roi['Xmax']))
+            bound1_lower[index] = roi['Ymin']
+            bound1_upper[index] = roi['Ymax']
+            bound2_lower[index] = roi['Zmin']
+            bound2_upper[index] = roi['Zmax']
+        if row['view'] == 'y':
+            slice_idx[index] = np.random.choice(np.arange(roi['Ymin'],roi['Ymax']))
+            bound1_lower[index] = roi['Xmin']
+            bound1_upper[index] = roi['Xmax']
+            bound2_lower[index] = roi['Zmin']
+            bound2_upper[index] = roi['Zmax']
+        if row['view'] == 'z':
+            slice_idx[index] = np.random.choice(np.arange(roi['Zmin'], roi['Zmax']))
+            bound1_lower[index] = roi['Xmin']
+            bound1_upper[index] = roi['Xmax']
+            bound2_lower[index] = roi['Ymin']
+            bound2_upper[index] = roi['Ymax']
+    
+    df['slice_idx'] = slice_idx
+    df['bound1_lower'] = bound1_lower
+    df['bound1_upper'] = bound1_upper
+    df['bound2_lower'] = bound2_lower
+    df['bound2_upper'] = bound2_upper
+
+    return df
+   
+def scan_3darray(arr, view:str, threshold:int= 1):
+    """
+    Scan Array in a given view to get indices where nodule exists from mask
+    -----------
+    Parameters:
+    arr
     --------
     Returns:
     x,y,z - list of position where nodule exists
     """ 
-    x,y,z= [],[],[]
+    edges=[]
+    if view=='x':
+        for i in range(arr.shape[0]):
+            if arr[i,:,:].any() == threshold:
+                edges.append(i)
+    if view=='y':
+        for i in range(arr.shape[1]):
 
-    for i in range(arr.shape[0]):
-        if arr[i,:,:].any() >= threshold:
-            x.append(i)
-
-    for i in range(arr.shape[1]):
-        if arr[:,i,:].any() >= 1:
-            y.append(i)
-    
-    for i in range(arr.shape[2]):
-        if arr[:,:,i].any() >= 1:
-            z.append(i)
-    
-    return x,y,z
-
-def get_slices(data, slice_idx, pid, ca, segmented, savepath):
-    """
-    Description:
-    -----------
-    Parameters:
-    args - dict
-    --------
-    Returns:
-    """
-    xslice = data[slice_idx['Xmid'], slice_idx['Ymin']:slice_idx['Ymax'], slice_idx['Zmin']:slice_idx['Zmax']]
-    yslice = data[slice_idx['Xmin']:slice_idx['Xmax'], slice_idx['Ymid'], slice_idx['Zmin']:slice_idx['Zmax']]
-    zslice = data[slice_idx['Xmin']:slice_idx['Xmax'], slice_idx['Ymin']:slice_idx['Ymax'], slice_idx['Zmid']] 
+            if arr[:,i,:].any() == threshold:
+                edges.append(i)
+    if view=='z':
+        for i in range(arr.shape[2]):
+            if arr[:,:,i].any() == threshold:
+                edges.append(i)
+    return edges

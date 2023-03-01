@@ -65,14 +65,13 @@ def scan_3darray(arr, threshold= 1):
             x.append(i)
 
     for i in range(arr.shape[1]):
-        if arr[:,i,:].any() == 1:
+        if arr[:,i,:].any() >= threshold:
             y.append(i)
-    
     for i in range(arr.shape[2]):
-        if arr[:,:,i].any() == 1:
+        if arr[:,:,i].any() >= threshold:
             z.append(i)
-    
     return x,y,z
+
 def check_savedir(savepath, segmented):
     """
     Description:
@@ -94,8 +93,23 @@ def check_savedir(savepath, segmented):
         os.mkdir(savepath)
     
     return savepath
-def save_slice(data,savepath, pid, ca, slice, ext= '.png'):
+
+def save_slice(data:np.array,savepath:str, pid:int, ca:int, slice:str, ext:str= '.png'):
     """
+    Saves Slice of the NRRD Data
+    -----------
+    Parameters:
+    data - np.array()
+        Contains the pixel/voxel values for a given slice from the nrrd image
+    savepath - str
+        directory in which the image will be stored
+    pid - int
+        patient identification value to be traced back to original nrrd file
+    ca - int
+        classification of the nodule (1 = malignant, 0 = benign)
+    slice - str
+        slice view of the nodule (x,y,z)
+    ext - str
     """
     filename = savepath + '/' + str(pid) + '_' + str(ca) + '_' + slice + ext
     if data.shape == [64,64]:
@@ -121,29 +135,59 @@ def get_slices(data, slice_idx, pid, ca, segmented, savepath):
     save_slice(yslice, savepath, pid, ca, slice = 'y', ext = '.png')
     save_slice(zslice, savepath, pid, ca, slice = 'z', ext = '.png')
     
-def create_bounds(shape, window_size, lower_val, upper_val):
+def create_bounds(shape:int, window_size:int, lower_val:int, upper_val:int):
     """
+    -----------
+    Parameters:
+    shape - int
+        Shape of the input image to verify where the edge of the image exists
+    window_size - int
+        prefered window size for selected object
+    lower_val - int
+        lowest idx value of an object in a given dimension
+    upper_val - int
+        highest idx value of an object in a given dimension
+    --------
+    Returns:
+    pad_lower - int
+        Modified lower bound to include necessary padding for image slice to fit window size
+    pad_upper - int
+        Modified upper bound to include necessary padding for image slice to fit window size
+    mid_point - int
+        Middle point of the object calculated based on upper and lower edge of object
     """
-    pad = (window_size - (upper_val-lower_val)) / 2
-    pad_lower = lower_val - pad
-    pad_upper = upper_val + pad
-    mid_point = lower_val + (upper_val-lower_val)
-    # print(pad_lower,pad_upper, shape)
-    if (pad_upper > shape):
+
+    pad = (window_size - (upper_val-lower_val))
+    pad_lower = lower_val - (pad/2)
+    pad_upper = upper_val + (pad/2)
+    mid_point = lower_val + (upper_val-lower_val) / 2
+
+    if (pad_upper >= shape):
         pad_lower -= (pad_upper - shape)
+        if pad_lower < 0:
+            pad_lower = 0
         pad_upper = shape
-    if (pad_lower < 0):
+    if (pad_lower <= 0):
         pad_upper += (0 - pad_lower)
+        if pad_upper > shape:
+            pad_upper = shape
         pad_lower = 0
 
-    return int(pad_lower), int(pad_upper), int(mid_point)
+    return math.floor(pad_lower), math.floor(pad_upper), math.floor(mid_point)  
 
-def create_roi(img_shape, x,y,z, window_size= 64):
+def create_roi(img_shape:list, x:list,y:list,z:list, window_size:int=64):
     """
-    Description
-    Parameters:
+    Create the Region of Interest in which the nodule exists and identifies the middle
+    points \n 
+    ----------- \n
+    Parameters: \n
+    row - pd.DataSeries
+        Contains the information for the Nrrd files
+    window_size - int
+        Size of the Region of interest
+    --------
     Returns:
-    """
+    """  
 
     xlower, xupper, xmid = create_bounds(img_shape[0], window_size, x[0], x[-1])
     ylower, yupper, ymid = create_bounds(img_shape[1], window_size, y[0], y[-1])
@@ -178,7 +222,7 @@ def main(args, command_line_args):
         'benignloc': args.benignpath,       # Benign Nodule Location
         'malignantloc': args.malignantpath  # Malignant Nodule Location
     }
-    window_size = 64
+
     df = load_files(config)
 
     for idx in df.index:

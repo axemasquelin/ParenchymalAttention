@@ -64,7 +64,6 @@ def train(trainloader, valloader, net, progressbar, config):
 
     
     for epoch in range(config['opt']['epochs']):  # loop over the dataset multiple times
-        progressbar.visual(epoch, config['opt']['epochs'])
 
         running_loss = 0.0  # Zeroing Running Loss per epoch
         total = 0           # Zeroing total images processed
@@ -72,6 +71,8 @@ def train(trainloader, valloader, net, progressbar, config):
 
         end = time.time()
         for i, data in enumerate(trainloader):
+            progressbar.visual(epoch= epoch, batch_id= i, max_batches= len(trainloader), max_epoch= config['opt']['epochs'])
+
             # Input
             images = data['image'].to(device = config['device'], dtype = torch.float)
             labels = data['label'].to(device = config['device'])
@@ -101,7 +102,7 @@ def train(trainloader, valloader, net, progressbar, config):
         trainTime[epoch] = time.time()-end
         
         validLoss[epoch], validAcc[epoch] = validate(valloader, criterion, net, config['device'])
-              
+          
     return {'Trainingloss': trainLoss,
             'Validationloss': validLoss,
             'TrainingAccuracy':trainAcc,
@@ -207,7 +208,10 @@ def test(testloader, net, device, CreateComposites=None):
                         fneg += 1 
                         if CreateComposites:
                             FalseNeg_orimg.append(ori_img)
-                
+        
+        print(f'       +     |      -  ')       
+        print(f'+ |  {tpos},  {fneg} ')
+        print(f'- |  {fpos},  {tneg} ')
         sens = tpos / (tpos + fneg)
         spec = tneg / (tneg + fpos)
         acc = (100 * correct/total)

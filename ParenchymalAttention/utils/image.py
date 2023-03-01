@@ -82,6 +82,7 @@ def showImageCam(img, mask, pred, net, method, ms = None, title=None, folder = '
         cam = weight_softmax[1].dot(mask.reshape((nc, h*w)))
 
     cam = cam.reshape(w, h)
+    cam += abs(cam.min())
     cam_img = (cam - np.min(cam))/(np.max(cam) - np.min(cam))
     cam_img = np.uint8(255 * cam_img)
     cam_img = cv2.resize(cam_img, (64,64))
