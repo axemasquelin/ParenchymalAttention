@@ -58,7 +58,7 @@ def csv_save(method, ms, data, name = ''):
 
     print(logs)
 
-def model_save(method, ms, net):
+def model_save(method, ms, fold, rep, net):
     """
     Description:
     -----------
@@ -67,46 +67,16 @@ def model_save(method, ms, net):
     Returns:
     """ 
     print("Saving Network")
+    create_directories(folder = '/results/' + method + '/Networks/' + f"{str(fold)}_{str(rep)}")
+
     if ms != None:
-        net_path = os.getcwd() + "/results/" + method + '/' + str(ms) + 'x' + '/' + method + '_bestnetwork.pt'
+        net_path = os.getcwd() + "/results/" + method + '/' + str(ms) + 'x' + '/Networks/' + method + '_bestnetwork.pt'
     else:
-        net_path = os.getcwd() + "/results/" + method + '/' + method + '_bestnetwork.pt'
-    torch.save(net, net_path)
-
-def saveAttentionImg(img_list, method, ms, heatmap = False, title = None):
-    """
-    Description:
-    -----------
-    Parameters:
-    --------
-    Returns:
-    """ 
-
-    w = 64 #img_list[0].shape[0]
-    h = 64 #img_list[0].shape[1]
-    d = 3 #img_list[0].shape[2]
-    img = np.zeros((w,h,d))
+        net_path = os.getcwd() + "/results/" + method + '/Networks/' + f"{str(fold)}_{str(rep)}/" + method + '_network.pt'
     
-    if len(img_list) != 0:
-        for i in range(len(img_list)):
-            img += img_list[i]
-
-        img = img/i    
-        if heatmap:
-            if method == 'Otsu' or method == 'DropBlock':
-                pth_to_save = os.getcwd()+ "/results/" + method + '/' + str(ms) + 'x' + '/GradCAM/' + title + '.png'
-            else:
-                pth_to_save = os.getcwd()+ "/results/" + method + '/GradCAM/' + title + '.png'
-        else:
-            if method == 'Otsu' or method == 'DropBlock':
-                pth_to_save = os.getcwd()+ "/results/" + method + '/' + str(ms) + 'x' + '/Composites/' + title + '.png'
-            else:
-                pth_to_save = os.getcwd()+ "/results/" + method + '/Composites/' + title + '.png'
-
-        cv2.imwrite(pth_to_save, img*125)
-
+    torch.save({'model_state_dict': net.state_dict()}, net_path)
         
-def create_directories(config):
+def create_directories(folder:str):
     """
     Description:
     -----------
@@ -115,12 +85,9 @@ def create_directories(config):
     Returns:
     """ 
     sys.stdout.write('\n\r {0} | Checking for Result Directories | {1}\n '.format('-'*25, '-'*25))
-    
-    for i in range(len(config['experiment_params']['maskratios'])):
-        maskratio = config['experiment_params']['maskratios'][i]
-        savedirectory = config['training_data']['cwd'] + '/results/' + str(maskratio) + 'x/'
-        dir_exists = os.path.exists(savedirectory)
-        if not dir_exists:
-            sys.stdout.write('\n\r {0} | Creating Result Directories | {0}\n '.format('-'*50))
-            os.mkdir(savedirectory)
+    savedirectory = os.getcwd() + folder
+    dir_exists = os.path.exists(savedirectory)
+    if not dir_exists:
+        sys.stdout.write('\n\r {0} | Creating Result Directories | {0}\n '.format('-'*25))
+        os.mkdir(savedirectory)
 

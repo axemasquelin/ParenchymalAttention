@@ -13,7 +13,9 @@
 '''
 # Dependencies
 # ---------------------------------------------------------------------------- #
+from torchvision import transforms as T
 from torch.utils.data import Dataset
+from torch.nn import ModuleList
 from sklearn.utils import resample
 from PIL import Image, ImageOps
 from itertools import cycle
@@ -21,7 +23,7 @@ import pandas as pd
 import numpy as np
 import random
 import glob
-import nrrd
+import tifffile
 import os
 import cv2
 
@@ -41,13 +43,14 @@ def load_files(config, ext:str='.csv'):
         df = pd.read_csv(config['experiment']['data'])
         df = resample_df(config['experiment']['seed'], df, 2)
     
-    if ext== '.npy': 
-        original_filelist = glob.glob('./dataset/Original/'+'*.npy')
+    if ext== '.tif': 
+        original_filelist = glob.glob('./dataset/Original/*'+ ext)
         pid = [os.path.basename(x).split('_')[0] for x in original_filelist]
         ca = [os.path.basename(x).split('_')[1].split('.')[0] for x in original_filelist]
-        df = pd.DataFrame(np.transpose([pid,original_filelist,ca]), columns=['pid','uri', 'ca'])
+        time = [os.path.basename(x).split('_')[2].split('.')[0] for x in original_filelist]
+        df = pd.DataFrame(np.transpose([pid,original_filelist,ca,time]), columns=['pid','uri', 'ca', 'time'])
         
-        masked_filelist = glob.glob('./dataset/Segmented/'+'*.npy')
+        masked_filelist = glob.glob('./dataset/Segmented/*'+ ext)
         pid = [os.path.basename(x).split('_')[0] for x in masked_filelist]
         df2 = pd.DataFrame(np.transpose([pid,masked_filelist]), columns=['pid','thresh_uri'])
         
@@ -117,28 +120,6 @@ def resample_df(seed, df, method):
     else:
         print('Error: unknown method')
 
-def cherrypick(fileids:list, filepath:str):
-    """
-    Description:
-    -----------
-    Parameters:
-    -------
-    Returns:
-    """
-    originals = [filepath + 'Original/' + x for x in fileids]
-    segmented = [filepath + 'Segmented/' + x for x in fileids]
-    pid = [x.split('_')[0] for x in fileids]
-    ca = [x.split('_')[1] for x in fileids]
-    dims = [np.asarray(Image.open(x)).shape for x in originals]
-    sliceview = [x.split('_')[2].split('.')[0] for x in fileids]
-
-    df = pd.DataFrame(np.transpose([originals, segmented, pid, ca, sliceview, dims]), columns=['uri','segmented_uri', 'pid', 'ca', 'sliceview', 'dimension'])
-    df = df[df.dimension == (64,64,4)]
-    df['ca'] = df['ca'].astype(int)
-
-    return df
-
-
 def augment_dataframe(df:pd.DataFrame, upsample:int=3,  augment:str='rand'):
     """
     Creates an augmented dataframe that randomly augments the dataset by taking slices adjacent to central slices, or takes all surrounding slices. 
@@ -158,71 +139,31 @@ def augment_dataframe(df:pd.DataFrame, upsample:int=3,  augment:str='rand'):
 
     if augment=='rand':
         df = df.loc[df.index.repeat(upsample)].reset_index(drop=True)  
-        # print(len(df))
-        df['view'] = [np.random.choice(['x','y','z']) for index in df.index]
-        # df['view'] = ['z' for index in df.index]
-        # df = prep.get_dims(df, augment)
+        # df['view'] = [np.random.choice(['x','y','z']) for index in df.index]
+        df['view'] = ['z' for index in df.index]
 
     else:
-        views = cycle(['x','y','z'])
+        views = cycle(['z'])
+        # views = cycle(['x','y','z'])
         df = df.loc[df.index.repeat(upsample)].reset_index(drop=True)  
         df['view'] = [next(views) for view in range(len(df))]
         # df = prep.get_dims(df, augment)
         
     return df
-class DFLoader(Dataset):
-    """
-    """
-    def __init__(self, data, method= None, augmentations=None, masksize=None, norms='norm'):
-        super().__init__()
-        self.data = data
-        self.augment= augmentations
-        self.masksize = masksize
-        self.norms = norms
-        self.method = method
-
-    def __len__(self) -> int:
-        return len(self.data)
-    
-    def __getitem__(self, index:int):
-        row = self.data.iloc[index]
-        img = Image.open(row['uri'])
-        img = np.asarray(img).T     
-
-        # maskmap = Image.open(row['segmented_uri'])
-        maskmap = np.asarray(maskmap).T
-
-        label = row['ca']
-        im = np.zeros((1,64,64))
-        if self.method != 'Original':
-            im[0,:,:] = img[0,:,:]
-            img = prep.normalize_img(im, self.norms)
-            img = prep.seg_method(img, maskmap=maskmap, method= self.method, masksize = self.masksize)
-            sample = {'image': img,
-                    'label': label,
-                    'id': row['pid']}
-
-        else:
-            im[0,:,:] = img[0,:,:]
-            sample = {'image': prep.normalize_img(im, self.norms),
-                      'label': label,
-                      'id': row['pid']}
-
-        return sample         
 
 class NPYLoader(Dataset):
     """
     Custom Nrrd file Dataloader class for pytorch; Will utilize raw and segmented Nrrd files to select random
     regions of the image for analysis.
     """
-    def __init__(self, data, method:str=None, augmentation:str=None, masksize:int=None, norms:str='norm', testing:bool=False):
+    def __init__(self, data, method:str=None, augmentation:str=True, masksize:int=None, norms:str='norm', testing:bool=False):
         super().__init__()
         self.data = data
         self.augment = augmentation
         self.masksize = masksize
         self.norms = norms
         self.method = method
-        self.testing = False
+        self.testing = testing
 
     def __len__(self)->int:
         """
@@ -242,50 +183,82 @@ class NPYLoader(Dataset):
         thres - np.array()
             Contains segmentation mask of size (1,64,64) 
         """
-        im = np.zeros((1,64,64))
-        mask = np.zeros((1,64,64))
-        
+        im = np.zeros((1,img.shape[0],img.shape[1]))
+        mask = np.zeros((1,thres.shape[0],thres.shape[1]))
+
         if edges[0] != edges[-1]:
             if testing:
                 sliceid = edges[int(len(edges)/2)]
             else:
-                sliceid = int(np.random.choice(np.arange(edges[0],edges[-1])))
+                sliceid = random.choice(edges)
         else:
             sliceid = edges[0]
 
         if row['view'] == 'x':
-            im[0,:,:] += img[sliceid, :, :]
-            mask[0,:,:] += thres[sliceid,:,:]
+            im[0,:,:] = img[sliceid, :, :]
+            mask[0,:,:] = thres[sliceid,:,:]
 
         if row['view'] == 'y':
-            im[0,:,:] += img[:,sliceid, :]
-            mask[0,:,:] += thres[:,sliceid,:]
+            im[0,:,:] = img[:,sliceid, :]
+            mask[0,:,:] = thres[:,sliceid,:]
 
         if row['view'] == 'z':
-            im[0,:,:] += img[:,:,sliceid]
-            mask[0,:,:] += thres[:,:,sliceid]
+            im[0,:,:] = img[:,:,sliceid]
+            mask[0,:,:] = thres[:,:,sliceid]
         
+
         return im, mask
+    
+    def __augment__(self, img, augment):
+        """
+        Randomly applies an torch augment to an image
+        """
 
-    def __getitem__(self, index:int):
-        row = self.data.iloc[index]
-        print(row['pid'])
+        if augment and self.testing==False:
+            img = Image.fromarray(img)
 
-        img = np.load(row['uri'])
-        thres = np.load(row['thresh_uri'])
-        edges = prep.scan_3darray(thres, view=row['view'], threshold=1)
-
-        img, thres = self.__getslice__(img, thres, row, edges, testing=self.testing)
-        # print(thres.shape)
-        if self.method != 'Original':
-            sample = {'image': prep.normalize_img(prep.seg_method(img, thres, method= self.method), self.norms),
-                    'label': int(row['ca']),
-                    'id': row['pid']
-                    }
-        else:
-            sample = {'image': prep.normalize_img(img, self.norms),
-                'label': int(row['ca']),
-                'id': row['pid']}
+            transforms = T.RandomApply(ModuleList([
+                T.RandomPerspective(),
+                T.RandomAffine(degrees=(0,180)),
+                T.RandomRotation(degrees=(0,180)),
+                T.RandomHorizontalFlip(),
+                T.RandomVerticalFlip(),
+                ]), p=0.3)
             
+            img = transforms(img)
+
+        return np.asarray(img)
+    
+    def __getitem__(self, index:int):
+        """
+        Gets Item from dataframe and return a sample containing input:image, label:diagnosis, and id:patient_id
+        """
+        seed =  np.random.randint(99999999)
+        random.seed(seed)
+
+        row = self.data.iloc[index]
+        
+        img = tifffile.imread(row['uri'])
+        thres = tifffile.imread(row['thresh_uri'])
+        edges = prep.scan_3darray(thres, view=row['view'], threshold=1)
+        img, thres = self.__getslice__(img, thres, row, edges, testing=self.testing)
+        img = prep.normalize_img(img, row['pid'], self.norms)
+
+        if self.method != 'Original':
+            img = prep.seg_method(img, thres, method= self.method)
+            # img[0,:,:] = self.__augment__(img[0], augment=self.augment)
+            sample = {'image': img,
+                    'label': int(row['ca']),
+                    'id': row['pid'],
+                    'time': row['time']
+                    }
+        else:            
+            # img[0,:,:] = self.__augment__(img[0], augment=self.augment)
+            sample = {'image': img,
+                'label': int(row['ca']),
+                'id': row['pid'],
+                'time': row['time']}
+        
         return sample
+
 

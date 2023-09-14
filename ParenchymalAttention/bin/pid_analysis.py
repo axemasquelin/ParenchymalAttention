@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats
-import os, cv2, glob
+import os, cv2, glob, csv
 # ---------------------------------------------------------------------------- #
 def resaveAttention(img, image_name, folderpath):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -21,10 +21,9 @@ def resaveAttention(img, image_name, folderpath):
     plt.savefig(image_name)
     plt.close()
 
-
 def data_load(filename, df_reference, var_names = None, clean = True):
     """
-    Definition:
+    Definition: Loads CSV Files
     Input:
     Output:
     """
@@ -36,49 +35,43 @@ def data_load(filename, df_reference, var_names = None, clean = True):
             vars.append(var_names[key])
 
     df = df[vars]
-    df = df[df.selected != 0]
-    
-    pid_reference = df_reference['pid'].to_list()
-    
-    df = df[df['pid'].isin(pid_reference)]
+    # df = df[df.selected != 0]
 
-    # if clean:
-    #     # Drop out the columns that have over 90% missing data points.
-    #     # df = df.dropna(axis=0)
+    pid_reference = df_reference.values
+    df = df[df['pid'].isin(pid_reference)]
 
     return df
 
-def get_imagedata(imgfiles, flag_cv2plt = False):
-    
+def get_imgdata(folder, filename):
+    """
+    Parameters:
+    Returns:
+    filelist - list
+    """
     df_imgs = pd.DataFrame()
+    filelist = []
     timepoint = []
-    sliceview = []
-    imgname = []
     pid = []
     ca = []
-
-    for imgfile in files:
-        img = cv2.imread(imgfile)
-        imgname = imgfile.split('/')[-1]
-        pid.append(int(imgname.split('_')[0]))
-        timepoint.append(imgname.split('_')[1])
-        sliceview.append(imgname.split('_')[3])
-        ca.append(imgname.split('_')[4])
-        
-        image_type = imgfile.split('_')[-1]
-        # print(image_type)
-        if flag_cv2plt:
-            if image_type == 'attention.png':
-                resaveAttention(img, imgfile, imgfolder)
-
+    classification = []
+    print(folder)
+    filepaths = glob.glob(folder + '*_original.png')
+    for filepath in filepaths:
+        file = os.path.basename(filepath)
+        pid.append(int(file.split('_')[0]))
+        ca.append(file.split('_')[1])
+        timepoint.append(int(file.split('_')[2][1]))
+        classification.append(file.split('_')[-2])
+    
     df_imgs['pid'] = pid
-    df_imgs['yr'] = timepoint
-    df_imgs['sliceview'] = sliceview
+    df_imgs['study_yr'] = timepoint
     df_imgs['ca'] = ca
-
+    df_imgs['classification'] = classification
+    
     return df_imgs
 
-def eval_MetaData(df_imgs, df_prsn, df_sctimage, df_sctabn, abnormalites = None):
+
+def eval_MetaData(df, abnormalities = None):
     '''
     Description
     Input:  1) df_imgs          - Dataframe containing Images Metadata
@@ -88,175 +81,257 @@ def eval_MetaData(df_imgs, df_prsn, df_sctimage, df_sctabn, abnormalites = None)
             5) abnormalities    - Abnormality defintions from NLST
     Output: 
     '''
-    ## Analysing Df_imgs
-    num_indv = len(df_imgs)     # Number of Individuals within Subfolder
-    
-    num_xslice = df_imgs['sliceview'].value_counts()['xSlice']
-    num_yslice = df_imgs['sliceview'].value_counts()['ySlice']
-    num_zslice = df_imgs['sliceview'].value_counts()['zSlice']
-
-    ## Patient Demographic Information
-    male_count = df_prsn['gender'].value_counts()[1]     # Number of Male Individuals
-    female_count = df_prsn['gender'].value_counts()[2]   # Number of Female Individuals
-
-    avg_age = df_prsn['age'].mean()                     # Average Individual Age
-    avg_pkyr = df_prsn['pkyr'].mean()                   # Average Smoke Pack years
-
-    avg_nodule = df_sctabn['SCT_LONG_DIA'].mean()       # Average Nodule Size
-
 
     ## Create New Dataframe
-    df = pd.DataFrame({ 'Number of Individuals': [len(df_imgs)],
-                        'Average Age': [df_prsn['age'].mean()],
-                        'STD Age': [df_prsn['age'].std()],          
-                        'Average Pkyrs': [df_prsn['pkyr'].mean()],
-                        'STD Pkyrs': [df_prsn['pkyr'].std()],
-                        'Average Nodule Size': [df_sctabn['SCT_LONG_DIA'].mean()],
-                        'STD Nodule Size': [df_sctabn['SCT_LONG_DIA'].std()],
-                        'Male Count': [df_prsn['gender'].value_counts()[1]],
-                        'Female Count': [df_prsn['gender'].value_counts()[2]],
-                        'Count Xslice': [df_imgs['sliceview'].value_counts()['xSlice']],
-                        'Count Yslice': [df_imgs['sliceview'].value_counts()['ySlice']],
-                        'Count Zslice': [df_imgs['sliceview'].value_counts()['zSlice']]
-                        })
+    df_stats = pd.DataFrame()
+    df_stats['Individuals'] = [len(df['pid'].values)]
+    for abnormality in abnormalities:
+        if abnormality !='pid':
+            df_stats[abnormality + '_mean'] = [df[abnormality].mean()]
+            df_stats[abnormality + '_std'] = [df[abnormality].std()]
 
-        
-    ## Abnormalities From Dataset
-    abn_valuecounts = df_sctabn['SCT_AB_DESC'].value_counts()
+    df_stats = df_stats.transpose()
 
-    ## Predominant Attenuation Information
-    Att_valuecounts = df_sctabn['SCT_PRE_ATT'].value_counts()
+    return df_stats
 
-    for indx in abn_valuecounts.index:
-        df[abnormalites[int(indx)]] = [abn_valuecounts[indx]]
+def stattests(arr:np.array, feature:str, alpha:float=0.05):
+    '''
+    Statistical Analysis of Features across False Positive (Index=0),
+    false negative (index 1), true positive (inde=2), and true negative
+    (index 3)
+    -----------
+    Parameters:
+    arr - np.array
+        contains all values for given feature
+    feature - string
+        name of the feature being analysed
+    alpha - float
+        cut of point for demonstrating method does not hold central limit theorem.     
+    '''
+    # FP: index 0, FN: index 1, TP: index 2, TN: index 3
+    
+    # False Positive - True Negative
+    stat,p = scipy.stats.levene(arr[0],arr[3])
+    if p < alpha:
+        # print('Unequal Variance TN-FP')
+        t, p_tnfp = scipy.stats.kruskal(arr[0], arr[3])
+    else:
+        t, p_tnfp = scipy.stats.ttest_ind(arr[0], arr[3])
+    
+    # False Positive - True Positive
+    stat,p = scipy.stats.levene(arr[0],arr[2])
+    if p < alpha:
+        # print('Unequal Variance TP-FP')
+        t, p_tpfp = scipy.stats.kruskal(arr[0], arr[2])
+    else:
+        t, p_tpfp = scipy.stats.ttest_ind(arr[0], arr[2])
 
-    for indx in Att_valuecounts.index:
-        df[abnormalites[int(indx)]] = [Att_valuecounts[indx]]
+    # False Negative - True Positive
+    stat,p = scipy.stats.levene(arr[1],arr[2])
+    if p < alpha:
+        # print('Unequal Variance TP-FN')
+        t, p_tpfn = scipy.stats.kruskal(arr[1], arr[2])
+    else:
+        t, p_tpfn = scipy.stats.ttest_ind(arr[1], arr[2])
+    
+    # False Negative - True Negative
+    stat,p = scipy.stats.levene(arr[1],arr[3])
+    if p < alpha:
+        # print('Unequal Variance TP-FP')
+        t, p_tnfn = scipy.stats.kruskal(arr[1], arr[3])
+    else:
+        t, p_tnfn = scipy.stats.ttest_ind(arr[1], arr[3])
 
-    df = df.transpose()
+    # False Positive - False Negative
+    stat,p = scipy.stats.levene(arr[0],arr[1])
+    if p < alpha:
+        # print('Unequal Variance TP-TN')
+        t, p_fnfp = scipy.stats.kruskal(arr[0], arr[1])
+    else:
+        t, p_fnfp = scipy.stats.ttest_ind(arr[0], arr[1])
+       
+    
+    # True Positive - True Negative
+    stat,p = scipy.stats.levene(arr[2],arr[3])
+    if p < alpha:
+        # print('Unequal Variance TP-TN')
+        t, p_tntp = scipy.stats.kruskal(arr[2], arr[3])
+    else:
+        t, p_tntp = scipy.stats.ttest_ind(arr[2], arr[3])
+    
+    # print(f' {feature} TP-FP p-value: {p_tpfp}')
+    # print(f' {feature} TP-FN p-value: {p_tpfn}')
+    # print(f' {feature} TN-FP p-value: {p_tnfp}')
+    # print(f' {feature} TN-FN p-value: {p_tnfn}')
+    # print(f' {feature} TN-TP p-value: {p_tntp}')
+    # print(f' {feature} FN-FP p-value: {p_fnfp}')
+
+    return (p_tpfp, p_tpfn, p_tnfp, p_tnfn, p_tntp, p_fnfp)
+
+
+def merge_dfs(df_imgs, df_prsn, df_sctabn, df_sctimage):
+    """
+    Parameters:
+    Returns:
+    """
+
+    df = pd.merge(df_prsn, df_sctabn, on='pid')
+    df = pd.merge(df, df_sctimage, on='pid')
+    df = pd.merge(df, df_imgs, on=['pid','study_yr'])
 
     return df
 
-def ttests(diam_arr, pkyr_arr, age_arr):
-    '''
-    '''
-
-    # FP: index 0, FN: index 1, TP: index 2, TN: index 3
-    t, p_tnfp = scipy.stats.ttest_ind(diam_arr[0][:70], diam_arr[3][:70], equal_var = False)
-    t, p_tpfp = scipy.stats.ttest_ind(diam_arr[0][:70], diam_arr[2][:70], equal_var = False)
-    t, p_tpfn = scipy.stats.ttest_ind(diam_arr[1][:70], diam_arr[2][:70], equal_var = False)
-    t, p_tnfn = scipy.stats.ttest_ind(diam_arr[1][:70], diam_arr[3][:70], equal_var = False)
+def load_rads(df:pd.DataFrame, rad_file:str, abnormalities:list):
+    """
+    Parameters:
+    df - pandas.dataframe
+    rad_file - string
+        radiomic csv file path
+    abnormalities - list
+        list of features to keep from radiomic file
+    """
+    df_rads = pd.read_csv(rad_file, header=0)
+    df_rads = df_rads[abnormalities]
+    df = pd.merge(df,df_rads,on='pid')
     
-    print('Nodule Diameter TP-FP p-value: ', p_tpfp)
-    print('Nodule Diameter TP-FN p-value: ', p_tpfn)
-    print('Nodule Diameter TN-FP p-value: ', p_tnfp)
-    print('Nodule Diameter TN-FN p-value: ', p_tnfn)
+    return df
 
 
-    t, p_tnfp = scipy.stats.ttest_ind(pkyr_arr[0][:], pkyr_arr[3][:])
-    t, p_tpfn = scipy.stats.ttest_ind(pkyr_arr[1][:], pkyr_arr[2][:])
 
-    print('Packyears TN-FP p-value: %f'%(p_tnfp))
-    print('Packyears TP-FN p-value: %f'%(p_tpfn))
+def main():
 
-    t, p_tnfp = scipy.stats.ttest_ind(age_arr[0][:], age_arr[3][:])
-    t, p_tpfn = scipy.stats.ttest_ind(age_arr[1][:], age_arr[2][:])
-    
-    print('Age TN-FP p-value: %f'%(p_tnfp))
-    print('Age TP-FN p-value: %f'%(p_tpfn))
-
-if __name__ == '__main__':
     methods = [
         'Original/',
-        # 'OtsuMask/16x/',
-        # 'OtsuMask/32x/',
-        # 'OtsuMask/48x/',
-        'OtsuMask/64x/',
-        # 'BlockMask/16x/',
-        # 'BlockMask/32x/',
-        # 'BlockMask/48x/',
-        # 'BlockMask/64x/',
+        'Tumor-only/',
+        'Parenchyma-only/'
     ]
 
     subfolders = [
-        'GradCAM/FP/',
-        'GradCAM/FN/',
-        'GradCAM/TP/',
-        'GradCAM/TN/',
+        'FP/',
+        'FN/',
+        'TP/',
+        'TN/',
     ]
     
     variables = {
             'pid': 'pid',
             'age': 'age',
             'pack_years': 'pkyr',
-            'gender': 'gender',
             'nodule_size': 'SCT_LONG_DIA',
-            'abnormalities': 'SCT_AB_DESC',
             'Kilo_VP': 'kvp',
             'slice_thickness': 'reconthickness',
             'Tube_Current': 'mas',
             'attenuation': 'SCT_PRE_ATT',
-            'selected': 'selected'
+            'selected': 'selected',
+            'study_year': 'STUDY_YEAR',
+            'study_year': 'study_yr'
     }
 
-    Abn_features = {     #List of Abnormal Description Found in NLST dataset
-        1: 'Soft Tissue',
-        2: 'Ground Glass',
-        3: 'Mixed',
-        4: 'Fluid/Water',
-        6: 'Fat Count',
-        7: 'Other Tissue Count',
-        9: 'Unable to Determine Count',
-        51:'Non-calcified Nodule or mass (opacity >= 4mm diameter)',
-        52:'Non-calcified micronodule(s) (opacity < 4mm diameter)',
-        53:'Benign Lung Nodule(s)',
-        54:'Atelectasis, segmental or greater',
-        55:'Pleural thickening or effusion',
-        56:'Non-calcified hilar/mediastinal adenopathy or mass (>= 10mm short axis)',
-        57:'Chest Wall Abnormality (bone destruction, metastisis)',
-        58:'Consolidation',
-        59:'Emphysema',
-        60:'Significant Cardiovascular abnormality',
-        61:'Reticular or reticulonodular opacities, honeycombing, fibrosis',
-        62:'6 or more nodules, not suspicious for cancer',
-        63:'other potentially significant abnormality above diaphram',
-        64:' other potentially significant abnormalities below diaphram',
-        65:'Other minor abnormalities'
-    }
-    
+    Abn_features = [
+        'pid',
+        'xnorm',                        # X position normalized to corina
+        'ynorm',                        # Y position normalized to corina
+        'znorm',                        # Z position normalized to corina
+        'laa950perc10b',                # Emphysema in 10mm boundary surrounding nodule
+        'meanintensity0i',              # Nodule average voxel intensity (Metric of density)
+        'compactness10i',               # How dense is the nodule
+        'sphericity0i',                 # How round is the nodule   
+        'graylevels0i',
+        'energy0i',
+        'entropy0i',
+        'skewness0i',
+        'kurtosis0i',
+        'maximum3ddiameter0i',
+    ]
+
+    rad_file = '/media/axel/Linux/University of Vermont/Research/radiomics/dataset/data_Original.csv' 
 
     flag_cv2plt = False
 
-    resultspath = os.path.split(os.getcwd())[0] + '/results/'
+    resultspath = os.getcwd() + '/results/'
 
-    folder_cohort = os.path.split(os.getcwd())[0] + '/Cohort Data/'
+    folder_cohort = os.getcwd() + '/Cohort Data/'
     files_cohort = glob.glob(folder_cohort + "/*.csv")
-    
+
     for method in methods:
         diam_arr = []
         pkyr_arr = []
         age_arr = []
+        xnorm_arr = []
+        ynorm_arr = []
+        znorm_arr = []
+        laa95010b_arr = []
+        meanintensity_arr = []
+        compactness10i_arr = []
+        sphericity0i_arr = []
+        graylevels0i_arr = []
+        energy0i_arr = []
+        entropy0i_arr = []
+        skewness0i_arr = []
+        kurtosis0i_arr = []
+        maximum3ddiameter0i_arr = []
+
+        ptable = pd.DataFrame()
+
         for subfolder in subfolders:
             print('Evaluating %s'%(method + subfolder))
-            imgfolder = resultspath + method + subfolder
-            files = glob.glob(imgfolder + '*.png')
+            imgfolder = resultspath + method + "GradCAM/2_9/" + subfolder
+            df_imgs = get_imgdata(imgfolder, filename='*_original.png')
+            print("Shape of Image Dataframe: ", df_imgs.shape)
+            # df_prsn = data_load(files_cohort[0], df_imgs['pid'], var_names = variables)      # DF with Patient Demographics   
+            # df_sctabn = data_load(files_cohort[1], df_imgs['pid'], var_names = variables)    # DF with CT Image Information
+            # df_sctimage = data_load(files_cohort[2], df_imgs['pid'], var_names = variables)  # DF with CT Abnormalities 
+            # df_prsn = df_prsn.dropna(axis=0)
+            # df_sctabn = df_sctabn.dropna(axis=0)
+            # df_sctimage = df_sctimage.dropna(axis=0)
             
+            # df = merge_dfs(df_imgs, df_prsn, df_sctabn, df_sctimage)
+            # df = df.drop_duplicates()
+            
+            df = load_rads(df_imgs,rad_file, abnormalities=Abn_features)
+            print("Shape of Dataframe: ", df.shape)
+            df_stats = eval_MetaData(df, abnormalities=Abn_features)
+            
+            df_stats.to_csv(resultspath + method + 'GradCAM/' + subfolder.split('/')[-2] + '_Information.csv')
 
-            df_imgs = get_imagedata(files, flag_cv2plt = flag_cv2plt)
-            df_prsn = data_load(files_cohort[0], df_imgs, var_names = variables)     # DF with Patient Demographics     
-            df_sctimage = data_load(files_cohort[1], df_imgs, var_names = variables)   # DF with CT Abnormalities 
-            df_sctabn = data_load(files_cohort[2], df_imgs, var_names = variables) # DF with CT Image Information
-            
-            df = eval_MetaData(df_imgs, df_prsn, df_sctimage, df_sctabn, abnormalites = Abn_features)
-            
-            df.to_csv(resultspath + method + 'GradCAM/' + subfolder.split('/')[-2] + '_Information.csv')
+            # diam_arr.append(df_sctabn['SCT_LONG_DIA'].values)
+            # pkyr_arr.append(df_prsn['pkyr'].values)
+            # age_arr.append(df_prsn['age'].values)
+            xnorm_arr.append(df['xnorm'].values)
+            ynorm_arr.append(df['ynorm'].values)
+            znorm_arr.append(df['znorm'].values)
+            laa95010b_arr.append(df['laa950perc10b'].values)
+            meanintensity_arr.append(df['meanintensity0i'].values)
+            compactness10i_arr.append(df['compactness10i'].values)
+            sphericity0i_arr.append(df['sphericity0i'].values)
+            graylevels0i_arr.append(df['graylevels0i'].values)
+            energy0i_arr.append(df['energy0i'].values)
+            entropy0i_arr.append(df['entropy0i'].values)
+            skewness0i_arr.append(df['skewness0i'].values)
+            kurtosis0i_arr.append(df['kurtosis0i'].values)
+            maximum3ddiameter0i_arr.append(df['maximum3ddiameter0i'].values)
 
-            
-            
-            diam_arr.append(df_sctabn['SCT_LONG_DIA'].dropna(axis=0).values)
-            # print(diam_arr)
-            # print(len(df_imgs))
-            pkyr_arr.append(df_prsn['pkyr'].dropna(axis=0).values)
-            age_arr.append(df_prsn['age'].dropna(axis=0).values)
+        ptable['Index'] = ['TP-FP','TP-FN','TN-FP','TN-FN','TN-TP','FN-FP']
 
-        ttests(diam_arr, pkyr_arr, age_arr)            
+        # ptable['Nodule Diameter'] = stattests(diam_arr, feature='Nodule Diameter')            
+        # ptable['Pack-years'] = stattests(pkyr_arr, feature='Pack-years')
+        # ptable['Age'] = stattests(age_arr, feature='Age')
+        ptable['X Norm'] = stattests(xnorm_arr, feature='X Norm')
+        ptable['Y Norm'] = stattests(ynorm_arr, feature='Y Norm')
+        ptable['Z Norm'] = stattests(znorm_arr, feature='Z Norm')
+        ptable['Laa950'] = stattests(laa95010b_arr, feature='Laa950 10mm Boundary')
+        ptable['Mean Intensity'] = stattests(meanintensity_arr, feature='Mean Intensity')
+        ptable['Compactness'] = stattests(compactness10i_arr, feature='Nodule Compactness')
+        ptable['Sphericity'] = stattests(sphericity0i_arr, feature='Nodule Sphericity')
+        ptable['Gray Levels'] = stattests(graylevels0i_arr, feature= 'Gray Levels')
+        ptable['Nodule Energy'] = stattests(energy0i_arr, feature= 'Nodule Energy')
+        ptable['Nodule Entropy'] = stattests(entropy0i_arr, feature= 'Nodule Entropy')
+        ptable['Nodule Skewness'] = stattests(skewness0i_arr, feature= 'Nodule Skewness')
+        ptable['Nodule Kurtosis'] = stattests(kurtosis0i_arr, feature= 'Nodule Kurtosis')
+        ptable['Nodule Max Diameter'] = stattests(maximum3ddiameter0i_arr, feature= 'Nodule Maximum Diameter')
+        ptable.T.to_csv(resultspath + method + '/' + 'Pvalues.csv')
+
+if __name__ == '__main__':
+    main()
+
+    

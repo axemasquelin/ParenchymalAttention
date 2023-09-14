@@ -36,11 +36,11 @@ def seg_method(im, maskmap= None, method='Segmented', masksize=None):
     if method == 'BlockMask':
         thres_img = block_algo(im, masksize)
 
-    if method =='Tumor-Segmentation':
+    if method =='Tumor-only':
         thres_img = segmentation_map(im, maskmap)
 
-    if method =='Surround-Segmentation':
-        maskmap = 1-maskmap
+    if method =='Parenchyma-only':
+        maskmap = abs(maskmap-1)
         thres_img = segmentation_map(im, maskmap)
 
     return thres_img
@@ -109,14 +109,11 @@ def segmentation_map(im, maskmap):
     """
     
     thres_img = np.zeros(im.shape)
-    # print(im.shape)
-    # print(maskmap.shape)
-    for i in range(im.shape[0]):
-        thres_img[i,:,:] = im[i,:,:] * maskmap[0]
+    thres_img = im * maskmap
 
     return thres_img
 
-def normalize_img(img, normalization: str):
+def normalize_img(img, pid, normalization: str):
     '''
     Description:
     ----------
@@ -130,12 +127,15 @@ def normalize_img(img, normalization: str):
     '''
     # print(img[0,:,:])
     img += abs(img.min())
-    if normalization == 'norm':
-        img = (img - img.min())/(img.max()-img.min())
 
+    if normalization == 'norm':   
+        img = (img - img.min())/(img.max()-img.min())
+        
     if normalization == 'stand':
         pixelmean = img.mean()
         pixelstd = img.std()
+        if pixelmean <= 0 or pixelstd <=0:
+            print(f'\n PID: {pid}, Mean: {pixelmean}, std: {pixelstd}')
         img = (img - pixelmean)/(pixelstd)
         img = (img - img.min())/(img.max()-img.min())
 
@@ -146,6 +146,7 @@ def normalize_img(img, normalization: str):
         pixelmean = np.log10(img).mean()
         pixelstd = np.log10(img).std()
         img = (np.log10(img)-pixelmean)/pixelstd
+    
 
     return img
 

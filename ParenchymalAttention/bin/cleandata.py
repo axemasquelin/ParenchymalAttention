@@ -15,17 +15,26 @@ import nrrd
 import math
 import argparse
 import logging
+import tifffile
 import cv2
 import sys, os, glob
 
 import nrrdtopng as pre
 # import ParenchymalAttention.utils.image as image 
 # ---------------------------------------------------------------------------- #
-def progress(index, max_index):
-        sys.stdout.write(f"\r {index+1} of {max_index} ~~~~~~ Progress: {((index+1)/max_index)*100:=5.3f} % ")
+class progress():
+    def __init__(self, max_index) -> None:
+        super().__init__()
+        self.max_index = max_index
 
-def save_nparray(img, segmentation, slice_idx:dict,
-                pid:int, ca:int, savepath:str, ext:str='.npy'):
+    def index(self, idx):
+        self.idx = idx
+
+    def _update(self, img, segmentation):
+        sys.stdout.write(f"\r {self.idx+1} of {self.max_index} | Img Size: {str(img.shape):<6} | Seg Size: {str(segmentation.shape):<6}")
+
+def save_images(img, segmentation, slice_idx:dict, bar,
+                pid:int, ca:int, time:str, savepath:str, ext:str='.tif',):
     """
     Saves the Region of Interest as a numpy 3 dimensional array.
     -----------
@@ -36,12 +45,18 @@ def save_nparray(img, segmentation, slice_idx:dict,
     """
     img = img[slice_idx['Xmin']:slice_idx['Xmax'],slice_idx['Ymin']:slice_idx['Ymax'], slice_idx['Zmin']:slice_idx['Zmax']]
     segmentation = segmentation[slice_idx['Xmin']:slice_idx['Xmax'],slice_idx['Ymin']:slice_idx['Ymax'], slice_idx['Zmin']:slice_idx['Zmax']]
+    filename = str(pid) + '_' + str(ca) +'_'+ str(time) + ext
+    bar._update(img,segmentation)
     
     if img.shape[0] != img.shape[1] or img.shape[0] != img.shape[2] or img.shape[1] != img.shape[2]:
         print(f'\nPID: {pid}, Image Shape: {img.shape}, Segmentation shape: {segmentation.shape}')
-    
-    np.save(savepath + '/Original/' + str(pid) + '_' + str(ca) + ext, img)
-    np.save(savepath + '/Segmented/' + str(pid) + '_' + str(ca) + ext, segmentation)
+    else:
+        if ext == '.tif' or ext == '.tiff':
+            tifffile.imwrite(savepath + '/Original/' + filename , img, bigtiff=True)
+            tifffile.imwrite(savepath + '/Segmented/' + filename, segmentation, bigtiff=True)
+        if ext == '.npy':
+            np.save(savepath + '/Original/' + filename + ext, img)
+            np.save(savepath + '/Segmented/' + filename + ext, segmentation)
 
 def validate(df, config):
     """
@@ -54,6 +69,8 @@ def validate(df, config):
     Returns:
     """
     max_index = len(df)
+    print(max_index)
+    bar = progress(max_index=max_index)
     valid = np.zeros(max_index)
     x_min = np.zeros(max_index)
     x_max = np.zeros(max_index)
@@ -67,13 +84,14 @@ def validate(df, config):
     for idx in df.index:
 
         row = df.iloc[idx]
-        progress(idx,max_index)
+        bar.index(idx=idx)
         try:
             img = nrrd.read(row['uri'])
             seg_map = nrrd.read(row['thresh_uri'])
+            
             if all(img[1]['sizes'] == seg_map[1]['sizes']):
                 x,y,z = pre.scan_3darray(arr=seg_map[0], threshold = 1)
-
+                
                 xdim[idx] = img[0].shape[0]
                 ydim[idx] = img[0].shape[1]
                 zdim[idx] = img[0].shape[2]
@@ -85,8 +103,9 @@ def validate(df, config):
                 z_max[idx]= z[-1]
                 valid[idx] = 1
                 slice_idx = pre.create_roi(img[1]['sizes'], x, y, z, window_size=64)
-                save_nparray(img=img[0], segmentation=seg_map[0], slice_idx=slice_idx,
-                                pid=row['pid'], ca=row['ca'], savepath=config['savedirectory'])
+                save_images(img=img[0], segmentation=seg_map[0], slice_idx=slice_idx, bar=bar,
+                                pid=row['pid'], ca=row['ca'], time=row['time'], 
+                                savepath=config['savedirectory'], ext='.tif')
 
             else:
                 '''Error Code for Segmentation Map not equal to Original Image'''
@@ -96,7 +115,7 @@ def validate(df, config):
             break
         except:
             pass
-            # print(f'\nFailed to load pid: {idx}\n')
+            print(f'\nFailed to load pid: {idx}\n')
 
     df['valid'] = valid
     df['xdim'] = xdim
@@ -131,14 +150,16 @@ def load_files(config:dict, augment:int=1):
     # Loading Benign Nrrds
     filelist = glob.glob(config['benignloc']+ '*.nrrd')   
     pid = [os.path.basename(filename).split('_')[0] for filename in filelist]
+    time = [os.path.basename(filename).split('_')[1] for filename in filelist]
     ca = [0 for filename in filelist]
-    df_begn = pd.DataFrame(np.transpose([pid, ca, filelist]), columns=['pid','ca','uri'])
+    df_begn = pd.DataFrame(np.transpose([pid, ca, filelist,time]), columns=['pid','ca','uri','time'])
 
     # Loading Cancer Nrrds
     filelist = glob.glob(config['malignantloc']+ '*.nrrd')   
     pid = [os.path.basename(filename).split('_')[0] for filename in filelist]
+    time = [os.path.basename(filename).split('_')[1] for filename in filelist]
     ca = [1 for filename in filelist]
-    df_mal = pd.DataFrame(np.transpose([pid, ca, filelist]), columns=['pid','ca','uri'])
+    df_mal = pd.DataFrame(np.transpose([pid, ca, filelist,time]), columns=['pid','ca','uri','time'])
     df = pd.concat([df_begn, df_mal])
 
     # # Loading Segmented Filenames
@@ -169,7 +190,7 @@ def main(args, command_line_args):
     }
     window_size = 64
     df = load_files(config, augment= 3)
-    # df.to_csv(config['savedirectory'] + '/npylist.csv')
+    df.to_csv(config['savedirectory'] + '/npylist.csv')
     
 
 def build_parser() -> argparse.ArgumentParser:

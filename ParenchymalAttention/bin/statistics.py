@@ -9,9 +9,6 @@
 # ---------------------------------------------------------------------------- #
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 # from statsmodels import stats
-from ParenchymalAttention.networks.training_testing import *
-from ParenchymalAttention.networks.architectures import *
-import ParenchymalAttention.utils.utils as utils
 
 import statsmodels.stats.multitest as smt
 import matplotlib.pyplot as plt
@@ -29,15 +26,15 @@ def progressInfo(method, metric, model):
             "\r Method: {0}, Model: {1}, Metric: {2}\n".format(method, model, metric)
     )   
 
-def multitest_stats(data1, data2):
+def multitest_stats(df):
     """
     Definition:
     Inputs:
     Outputs:
     """
     
-    pvals = np.zeros(6)         # Need to change this to be combination equation C(n,r) = (n!)/(r!(n-r)!)
-    tvals = np.zeros(6)
+    pvals = np.zeros(3)         # Need to change this to be combination equation C(n,r) = (n!)/(r!(n-r)!)
+    tvals = np.zeros(3)
     
     t, p = scipy.stats.ttest_ind(df[df.columns[0]], df[df.columns[1]])
     pvals[0], tvals[0] = p, t
@@ -45,25 +42,18 @@ def multitest_stats(data1, data2):
     pvals[1], tvals[1] = p, t
     t, p = scipy.stats.ttest_ind(df[df.columns[1]], df[df.columns[2]])
     pvals[2], tvals[2] = p, t
-    t, p = scipy.stats.ttest_ind(df[df.columns[0]], df[df.columns[3]])
-    pvals[3], tvals[3] = p, t
-    t, p = scipy.stats.ttest_ind(df[df.columns[1]], df[df.columns[3]])
-    pvals[4], tvals[4] = p, t
-    t, p = scipy.stats.ttest_ind(df[df.columns[2]], df[df.columns[3]])
-    pvals[5], tvals[5] = p, t
-  
-    y = smt.multipletests(pvals, alpha=0.01, method='b', is_sorted = False, returnsorted = False)
+
+    y = smt.multipletests(pvals, alpha=0.05, method='b', is_sorted = False, returnsorted = False)
   
     print("%s - %s | P-value: %.12f"%(df.columns[0], df.columns[1], y[1][0]))    
     print("%s - %s | P-value: %.12f"%(df.columns[0], df.columns[2], y[1][1]))    
     print("%s - %s | P-value: %.12f"%(df.columns[1], df.columns[2], y[1][2]))    
-    print("%s - %s | P-value: %.12f"%(df.columns[0], df.columns[3], y[1][3])) 
-    print("%s - %s | P-value: %.12f"%(df.columns[1], df.columns[3], y[1][4]))
-    print("%s - %s | P-value: %.12f"%(df.columns[2], df.columns[3], y[1][5]))        
+      
     return y
 
 
 def annotatefig(sig, x1, x2, y, h):
+    print(sig)
     if sig < 0.05:
         if (sig < 0.05 and sig > 0.01):
             sigtext = '*'
@@ -74,7 +64,8 @@ def annotatefig(sig, x1, x2, y, h):
 
         plt.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1.5, c='k')
         plt.text((x1+x2)*.5, y+h, sigtext , ha='center', va='bottom', color='k')
-def violin_plots(df, metric, method, key,
+
+def violin_plots(df, metric, methods,
                  sig1 = None, sig2 = None, sig3 = None,
                  sig4 = None, sig5 = None, sig6 = None):
     """
@@ -85,30 +76,24 @@ def violin_plots(df, metric, method, key,
 
     colors = {
                 'Individual':   "BuGn",
-                'Combined':     "RdBu",
+    #             'Combined':     "RdBu",
              }
-
-    titles = {
-            'rf': 'Random Forest',
-            'svm': 'Support Vector Machine',
-            'Lasso': 'LASSO Regression'
-            }
 
     fig, ax = plt.subplots()
     chart = sns.violinplot(data = df, cut = 0,
                            inner="quartile", fontsize = 16,
-                           palette= sns.color_palette(colors[key], 8))
+                           palette= sns.color_palette(colors['Individual'], 8))
 
     chart.set_xticklabels(chart.get_xticklabels(), rotation=25, horizontalalignment='right')
     plt.xlabel("Dataset", fontsize = 14)
 
     if metric == 'AUC':
-        plt.title(titles[method] + " " + metric.upper() + " Distribution", fontweight="bold", pad = 20)
+        plt.title(metric.upper() + " Distribution", fontweight="bold", pad = 20)
         plt.yticks([0.5,0.6,.7,.8,.9,1], fontsize=15)
         plt.ylabel(metric.upper(), fontsize = 16)
         plt.ylim(0.45,1.07)
     else:
-        plt.title(method + " " + metric.capitalize() + " Distribution", fontweight="bold")
+        plt.title(metric.capitalize() + " Distribution", fontweight="bold")
         plt.ylabel(metric.capitalize(), fontsize = 16)
         
     
@@ -130,28 +115,10 @@ def violin_plots(df, metric, method, key,
         y, h, col = 0.993, .0025, 'k'
         annotatefig(sig3, x1, x2, y, h)
 
-    if sig4 != None:
-        x1, x2 = 0, 3                           # 0i vs. Maximum Diameter
-        y, h, col = 1.065, .0025, 'k'
-        annotatefig(sig4, x1, x2, y, h)
-
-    if sig5 != None:
-        x1, x2 = 1, 3                           # 10b/10ib vs Maximum Diameter
-        y, h, col = 1.04, .0025, 'k'
-        annotatefig(sig5, x1, x2, y, h)
-
-    if sig6 != None:
-        x1, x2 = 2, 3                           # 15b/15ib vs. Maximum Diameter
-        y, h, col = .981, .0025, 'k'
-        annotatefig(sig6, x1, x2, y, h)
-
-    result_dir = os.path.split(os.getcwd())[0] + "/results/"
-    if key == 'individual':
-        plt.savefig(result_dir + metric + "_" + method + "_Across_" + key + "_Dataset.png", bbox_inches='tight',
-                    dpi=600)
-    else:
-        plt.savefig(result_dir + metric + "_" + method + "_Across_" + key + "_Dataset.png", bbox_inches='tight',
-                    dpi=600)
+    result_dir = os.getcwd() + "/results/"
+    
+    plt.savefig(result_dir + metric + "_Across_Dataset.png", bbox_inches='tight',
+                dpi=600)
 
     plt.close()
 
@@ -165,15 +132,14 @@ if __name__ == '__main__':
     # Network Parameters
     models = [
             'Original',
-            'Masked',
-            # 'Combined'
+            'Tumor-only',
+            'Parenchyma-only'
             ]
 
     metrics = [                    # Select Metric to Evaluate
             'auc',                 # Area under the Curve
             'sensitivity',         # Network Senstivity
             'specificity',         # Network Specificity         
-            'time',
             ]
     
     # Variable Flags
@@ -189,56 +155,52 @@ if __name__ == '__main__':
         np_orig = np.zeros((5,5))          # Wavelet Layer Dataframe for violin plots
         np_comb = np.zeros((5,5))          # Multi-level Wavelet Dataframe
         
-
-        for root, dirs, files in os.walk(os.path.split(os.getcwd())[0] + "/results/", topdown = True):
-            for name in files:
-                if (name.endswith(metric + ".csv")):
-                    header = name.split('_' + metric)[0]
-                    if header in models:
-                        mean_ = []
-                        filename = os.path.join(root,name)
-                        with open(filename, 'r') as f:
-                            reader = csv.reader(f)
-                            next(reader)
-                            for row in reader:
-                                for l in range(len(row)-1):
-                                    mean_.append(float(row[l+1]))
-                        df[header] = np.transpose(mean_)
-                        print(header)
-                        if metric == 'auc':
-                            if (header == 'Obfuscated'):
-                                np_obf = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
-                            if (header == 'Original'):
-                                np_orig = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
-                            if (header == 'Combined'):
-                                np_comb = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
+        for model in models:
+            for root, dirs, files in os.walk(os.getcwd() + "/results/" +model + '/', topdown = True):
+                for name in files:
+                    if (name.endswith(metric + ".csv")):
+                        header = name.split('_' + metric)[0]
+                        if header in models:
+                            mean_ = []
+                            filename = os.path.join(root,name)
+                            with open(filename, 'r') as f:
+                                reader = csv.reader(f)
+                                next(reader)
+                                for row in reader:
+                                    for l in range(len(row)-1):
+                                        mean_.append(float(row[l+1]))
+                            df[header] = np.transpose(mean_)
+                            print(header)
+                            if metric == 'auc':
+                                if (header == 'Original'):
+                                    np_orig = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
+                                if (header == 'Parenchyma-only'):
+                                    np_surround = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
+                                if (header == 'Tumor-only'):
+                                    np_tumor = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
+        # df = df.rename({'Surround-Segmentation': 'Parenchyma-Only', 'Tumor-Segmentation': 'Tumor-Only'}, axis = 'columns')      
         cols = df.columns.tolist()
-        cols = ['Original',
-                'Masked'
-                # 'Combined'
-                ]
+    
         
         df = df[cols]
         print(df)
         if check_stats:
-            print("Comparing Original-Obfuscated")
-            sob = multitest_stats(np_orig, np_obf)
-            print("Comparing Original-Combined")
-            soc = multitest_stats(np_orig, np_comb)
-            print("Comparing Obfuscated-Combined")
-            scb = multitest_stats(np_comb, np_obf)
+            sigs = multitest_stats(df)
+            print(sigs)
             
         if create_violin:
             print("Violin Plots")
             if (check_stats and metric == 'auc'):
-                violin_plots(df, metric, models, sig_ob = sob, sig_oc = soc, sig_cb = scb)
+                violin_plots(df, metric, models, sig1=sigs[1][0], sig2=sigs[1][1], sig3=sigs[1][2])
             else:
                 violin_plots(df, metric, models)
 
-        if metric == 'auc':
-            print("Original: ", df['Original'].mean())
-            print("Masked: ", df["Masked"].mean())
-            
-            print("Original: ", df['Original'].std())
-            print("Masked: ", df["Masked"].std())
-            
+        # if metric == 'auc':
+        print("Original Mean: ", df['Original'].mean())
+        print("Tumor-Only Mean: ", df["Tumor-only"].mean())
+        print("Parenchyma-Only Mean: ", df["Parenchyma-only"].mean())
+        
+        print("Original STD: ", df['Original'].std())
+        print("Tumor-Only STD: ", df["Tumor-only"].std())
+        print("Parenchyma-Only STD: ", df["Parenchyma-only"].std())
+                

@@ -8,7 +8,6 @@
 # Libraries and Dependencies
 # --------------------------------------------
 from sklearn.metrics import roc_curve, auc, confusion_matrix
-from ParenchymalAttention.networks.loss import FocalLoss
 
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -30,8 +29,6 @@ def optim_criterion_select(net, opt):
     Output:
     """
     # Define Loss Functions
-    if opt['loss'] == 'focal':
-        crit = FocalLoss().cuda()
     if opt['loss'] == 'entropy':
         crit = nn.CrossEntropyLoss().cuda()
 
@@ -77,7 +74,6 @@ def train(trainloader, valloader, net, progressbar, config):
             images = data['image'].to(device = config['device'], dtype = torch.float)
             labels = data['label'].to(device = config['device'])
 
-            # print(images.shape)
             images = torch.autograd.Variable(images)
             labels = torch.autograd.Variable(labels)
             
@@ -140,10 +136,14 @@ def validate(testloader, criterion, net, device):
 
             running_loss += loss.item()
         
-
     return (running_loss/i, correct/total * 100)
 
-def test(testloader, net, device, CreateComposites=None):
+def test(testloader, net, device):
+    """
+    Description:
+    Input:
+    Output:
+    """
     correct = 0
     total = 0
     
@@ -160,12 +160,6 @@ def test(testloader, net, device, CreateComposites=None):
         fneg = 0
         count = 0
         
-        if CreateComposites:
-            FalsePos_orimg = []
-            TruePos_orimg = []
-            FalseNeg_orimg = []
-            TrueNeg_orimg = []
-
         for data in testloader:
             images = data['image'].to(device = device, dtype = torch.float)
             labels = data['label'].to(device = device)
@@ -185,29 +179,17 @@ def test(testloader, net, device, CreateComposites=None):
                 softpred.append(outputs[i,1].cpu().squeeze().numpy())
                 count += 1
 
-                if CreateComposites:
-                    ori_img = np.zeros((64,64,1))
-                    ori_img[:,:,:] = images[i].cpu().numpy().T   
-    
                 if labels[i] == 1:
                     if labels[i] == pred[i]:
                         tpos += 1
-                        if CreateComposites:
-                            TruePos_orimg.append(ori_img)
                     else:
                         fpos += 1
-                        if CreateComposites:
-                            FalsePos_orimg.append(ori_img)
-
                 else:
                     if labels[i] == pred[i]:
                         tneg += 1
-                        if CreateComposites:
-                            TrueNeg_orimg.append(ori_img)
+
                     else:
                         fneg += 1 
-                        if CreateComposites:
-                            FalseNeg_orimg.append(ori_img)
         
         print(f'       +     |      -  ')       
         print(f'+ |  {tpos},  {fneg} ')
@@ -219,61 +201,12 @@ def test(testloader, net, device, CreateComposites=None):
         fps, tps, threshold = roc_curve(targets, softpred[:])
 
         conf_matrix = confusion_matrix(prediction, targets)
-    
-    if CreateComposites:
-        return (
-            conf_matrix,        # Test Confusion Matrix for Malignant and Benign Nodules
-            fps,                # False Positive Rates
-            tps,                # True Positiive Rates
-            sens,               # Sensitivity
-            spec,               # Specificity
-            acc,                # Accuracy of network
-            TrueNeg_orimg,
-            TruePos_orimg,
-            FalsePos_orimg,
-            FalseNeg_orimg
-        )
 
-    else:
-        return( 
-            conf_matrix, fps, tps,           
-            sens, spec, acc)
-
-def eval_bestmodel(net, X, y, filenames, device, dataset = None, ms = None):
-    """
-    Description:
-    Inputs:
-    Outputs:
-    """
-    for i in range(len(X)):
-        im = np.zeros((1,1,64,64))
-        im[0,:,:,:] = X[i]
-        label = y[i]
-        fileid = filenames[i]
-
-        torch_im = torch.from_numpy(im)
-        torch_label = torch.from_numpy(np.asarray(label))
-
-        img = torch_im.to(device=device, dtype=torch.float)
-        label = torch_label.to(device=device)
-    
-        output, x_avg = net(img, flag=True)
-
-        _, pred = torch.max(output, 1)
-
-        if ((pred == 1) and (pred == label)):
-            fileid = fileid.split('.')[0] + '_TP'
-            folder = '/GradCAM/TP/'
-        elif ((pred == 1) and (pred != label)):
-            fileid = fileid.split('.')[0] + '_FP'
-            folder = '/GradCAM/FP/'
-        elif ((pred == 0) and (pred == label)):
-            fileid = fileid.split('.')[0] + '_TN'
-            folder = '/GradCAM/TN/'
-        elif ((pred == 0) and (pred != label)):
-            fileid = fileid.split('.')[0] + '_FN'
-            folder = '/GradCAM/FN/'
-        
-        x_avg = x_avg.cpu().detach().numpy()
-        
-        image.showImageCam(im, x_avg, net, dataset, ms = ms, title = fileid, folder = folder)
+    return (
+        conf_matrix,        # Test Confusion Matrix for Malignant and Benign Nodules
+        fps,                # False Positive Rates
+        tps,                # True Positiive Rates
+        sens,               # Sensitivity
+        spec,               # Specificity
+        acc,                # Accuracy of network
+    )

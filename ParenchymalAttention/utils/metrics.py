@@ -94,8 +94,12 @@ def plot_MeanLoss(arr, dataset, static_fig, fig, ms,
 
 
 def calcAuc (fps, tps, method, ms, reps, plot_roc = False):
-    ''' Calculate mean ROC/AUC for a given set of 
-        true positives (tps) & false positives (fps)
+    '''
+    Description: Calculate mean ROC/AUC for a given set of true positives (tps) & false positives (fps)
+    -----------
+    Parameters:
+    --------
+    Results:
     '''
 
     tprs, aucs = [], []
@@ -121,7 +125,7 @@ def calcAuc (fps, tps, method, ms, reps, plot_roc = False):
 
     if plot_roc:
         plot_roc_curve(tprs, mean_fpr, mean_tpr, mean_auc, std_auc, reps, method, ms)
-    # print(aucs)
+
     return aucs
 
 

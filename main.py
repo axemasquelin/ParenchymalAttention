@@ -9,6 +9,7 @@
 # ---------------------------------------------------------------------------- #
 from argparse import Namespace
 from sklearn.model_selection import train_test_split
+from torchinfo import summary
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,10 +21,10 @@ import sys, os
 from ParenchymalAttention.networks import eval
 from ParenchymalAttention.networks import architectures
 from ParenchymalAttention.data import dataloader
-from ParenchymalAttention.utils import image
 from ParenchymalAttention.utils import utils
 from ParenchymalAttention.utils import progress
 from ParenchymalAttention.utils import metrics
+from ParenchymalAttention import postprocess
 # ---------------------------------------------------------------------------- #
 
 def GPU_init(loc):
@@ -55,19 +56,34 @@ def net_select(model):
     net - class 
         class containing the parameters and information of the network. Check architecture.py for further information on custom networks
     """
-    if (model == 'MiniUnet'):
-        net = architectures.MiniUnet
+    if (model == 'EfficientNet'):
+        net = architectures.EfficientNet()
         net.apply(net.init_weights)
     
     elif (model == "Miniception"):
-        net = architectures.Miniception()
+        net = architectures.Naiveception()
         net.init_weights()
 
+    elif (model == 'MobileNet'):
+        net = architectures.MobileNetV1()
+        net.init_weights()
     else:
         print("Warning: Model Not Found")
     
     return net
-    
+
+def result_directories(method:str):
+    """
+    Creates the expected directories within results in case they are missing
+    -----------
+    Parameters:
+    method - string
+        variable containing string of the method being evaluated at the moment
+    """
+    utils.create_directories(folder = '/results/' + method)
+    utils.create_directories(folder = '/results/' + method + '/GradCAM')
+    utils.create_directories(folder = '/results/' + method + '/Networks')
+
 
 def experiment(dataset:object, method:str, config:object, masksize:int):
     """
@@ -96,6 +112,9 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
     # Defining empty lists to store network performance information
     trainloss, valloss =  [], []
     trainacc, valacc =  [], []
+    fprs, tprs = [], []
+    dataset_split = []
+
     sensitivity =  np.zeros((config['experiment']['folds'],config['experiment']['reps']))
     specificity =  np.zeros((config['experiment']['folds'],config['experiment']['reps']))
     auc_scores = np.zeros((config['experiment']['folds'],config['experiment']['reps']))
@@ -116,18 +135,13 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
 
 
     for k in range(config['experiment']['folds']):
-        df_train, df_test = train_test_split(dataset, test_size= config['experiment']['split'][2], random_state = k)
-        df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
-
-        # print(f"Malignant: {len(df_train[df_train.ca==1])} | Benign: {len(df_train[df_train.ca==0])}")
-        # print(f"Malignant: {len(df_val[df_val.ca==1])} | Benign: {len(df_val[df_val.ca==0])}")
-        # print(f"Malignant: {len(df_test[df_test.ca==1])} | Benign: {len(df_test[df_test.ca==0])}")
+        df_train, df_test = train_test_split(dataset, test_size= config['experiment']['split'][1], random_state = k)
+        # df_train, df_val = train_test_split(df_train, test_size= config['experiment']['split'][1], random_state = k)
         
-        df_train = dataloader.augment_dataframe(df_train, upsample=16, augment='rand')
-        df_val = dataloader.augment_dataframe(df_val, upsample=16, augment='rand')
-        df_test = dataloader.augment_dataframe(df_test, upsample=3, augment='infer')
+        df_train = dataloader.augment_dataframe(df_train, upsample=3, augment='rand')
+        # df_val = dataloader.augment_dataframe(df_val, upsample=6, augment='rand')
+        df_test = dataloader.augment_dataframe(df_test, upsample=2, augment='infer')
 
-        fprs, tprs = [], []
 
         for r in range(config['experiment']['reps']):
             bar._update(rep= r, fold= k)
@@ -137,20 +151,20 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
             net = net.to(config['device'])
             
             if config['flags']['Params'] and k==0 and r==0:
-                utils.check_parameters([net], params={'model': [config['experiment']['model']]})
+                summary(net, (1,1,64,64))
 
             # Load Training Dataset
             trainset = dataloader.NPYLoader(df_train, method=method)
-            trainloader = torch.utils.data.DataLoader(trainset, batch_size= 75, shuffle= True)
+            trainloader = torch.utils.data.DataLoader(trainset, batch_size= 128, shuffle= True)
             
-            valset = dataloader.NPYLoader(df_val, method=method)
-            valloader = torch.utils.data.DataLoader(valset, batch_size= 75, shuffle= True)
+            # valset = dataloader.NPYLoader(df_val, method=method)
+            # valloader = torch.utils.data.DataLoader(valset, batch_size= 125, shuffle= True)
 
             #Load testing Dataset
             testset = dataloader.NPYLoader(df_test, method=method, testing=True)
-            testloader = torch.utils.data.DataLoader(testset, batch_size= 75, shuffle= True)
+            testloader = torch.utils.data.DataLoader(testset, batch_size= 128, shuffle= True)
 
-            output = eval.train(trainloader, valloader, net, bar, config)
+            output = eval.train(trainloader, testloader, net, bar, config)
             print(output['TrainingAccuracy'])
             print(output['Trainingloss'])
             trainloss.append(output['Trainingloss'])
@@ -158,17 +172,28 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
             trainacc.append(output['TrainingAccuracy'])
             valacc.append(output['ValidationAccuracy'])
 
-            confmatrix, fp, tp, sens, spec, acc, TNoimg, TPoimg, FNoimg, FPoimg = eval.test(testloader, net, device=config['device'], CreateComposites=config['flags']['CreateComposites'])   
+            confmatrix, fp, tp, sens, spec, acc = eval.test(testloader, net, device=config['device'])   
+
+            """
+            image.getcam(testloader, net, method,
+                        fold = k, rep = r,
+                        masksize= masksize,
+                        selectcam='GradCAM',
+                        device=config['device'],
+                        folder='/GradCAM/')       
+            """            
+            
+            utils.model_save(method, masksize, fold=k, rep=r, net=net)
 
             if acc > best_acc:
                 best_acc = acc
-                utils.model_save(method, masksize, net)
+   
                 metrics.plot_confusion_matrix(confmatrix, config['experiment']['classnames'], r, masksize, method, normalize = True, saveFlag = True)
                 
                 metrics.plot_metric(params={
                                     'xlabel': 'epochs',
                                     'ylabel': 'Loss',
-                                    'title': 'Autoencoder Loss (Mask Ratio: %s)'%(str(masksize)),
+                                    'title': '%s Loss (Mask Ratio: %s)'%(str(config['opt']['loss']),str(masksize)),
                                     'maskratio': masksize,
                                     'trainmetric': output['Trainingloss'],
                                     'valmetric': output['Validationloss'],
@@ -189,26 +214,24 @@ def experiment(dataset:object, method:str, config:object, masksize:int):
                                     'method': method,
                                     })
 
-                if config['flags']['CreateComposites']:                     
-                    utils.saveAttentionImg(TNoimg, method, masksize, title= 'AverageTrueNegative_Image')
-                    utils.saveAttentionImg(TPoimg, method, masksize, title= 'AverageTruePositive_Image')
-                    utils.saveAttentionImg(FNoimg, method, masksize, title= 'AverageFalseNegative_Image')
-                    utils.saveAttentionImg(FPoimg, method, masksize, title= 'AverageFalsePositive_Image')
-
-                
-                image.getcam(testloader, masksize, net, method, config['device'], folder = '/GradCAM/')
-
             sensitivity[k,r] = sens
             specificity[k,r] = spec
-
+            
+            dataset_split.append(f"Training: {len(df_train)} | Test: {len(df_test)}")
             fprs.append(fp), tprs.append(tp)
         
-        auc_scores[k,:] = metrics.calcAuc(fprs,tprs, method, masksize, r, plot_roc= True)
-        fig += 1
+    auc_scores = np.reshape(metrics.calcAuc(fprs,tprs, method, masksize, r, plot_roc= True),
+                            (config['experiment']['folds'],config['experiment']['reps']))
+    
+    dataset_split = np.reshape(np.asarray(dataset_split),(config['experiment']['folds'],config['experiment']['reps']))
 
+    utils.csv_save(method, masksize, dataset_split, name = 'dataset_split')
     utils.csv_save(method, masksize, sensitivity, name = 'sensitivity')
     utils.csv_save(method, masksize, specificity, name = 'specificity')
-    utils.csv_save(method, masksize, auc_scores, name = 'auc')             
+    utils.csv_save(method, masksize, auc_scores, name = 'auc')
+
+
+    
 
 
 def main(args, command_line_args):
@@ -249,7 +272,6 @@ def main(args, command_line_args):
             'momentum': args.momentum
         },
         'flags':{
-            'CreateComposites': args.composites,
             'EvalBestModel': args.bestmodel,
             'Standards': args.standards,
             'Features': args.features,
@@ -258,19 +280,23 @@ def main(args, command_line_args):
             'SaveFigs': args.savefigures,
             'SaveAUC': args.saveAUC,
         }
-    
     }
 
     sys.stdout.write('\n\r {0}\n Loading User data from: {1}\n {0}\n '.format('='*(24 + len(config['experiment']['data'])), config['experiment']['data']))
     
-    dataset = dataloader.load_files(config, ext='.npy')
+    dataset = dataloader.load_files(config, ext='.tif')
 
     for method in config['experiment']['method']:
         if method== 'Otsu' or method=='DropBlock':
             for masksize in config['experiment']['masksize']:
                 experiment(dataset=dataset, method=method, config=config, masksize=masksize)
         else:
+            result_directories(method)
             experiment(dataset=dataset, method=method, config=config, masksize=None)
+    
+    postprocess.run_model(config, dataset)
+
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -280,28 +306,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--seed', type=int, default= 2020, help='Random Seed for Initializing Network')
     parser.add_argument('--reps', type=int, default=10, help='Number of repetition for a given fold')
     parser.add_argument('--folds', type=int, default=10, help='Number of Folds')
-    parser.add_argument('--split', type=tuple, default=(0.7,0.1,0.2), help='Dataset training/validation/testing split')
-    parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','MiniUnet'])
-    parser.add_argument('--method', type=list, default=['Original'],
-                        # ['Tumor-Segmentation','Surround-Segmentation'], 
-                        # choices=['Original','Tumor-Segmentation','Surround-Segmentation','Otsu','DropBlock'])
-                        # choices=['Tumor-Segmentation','Surround-Segmentation']
-    )
+    parser.add_argument('--split', type=tuple, default=(0.75,0.25), help='Dataset training/validation/testing split')
+    parser.add_argument('--model', type=str, default='Miniception', choices=['Miniception','EfficientNet','MobileNet'])
+    parser.add_argument('--method', type=list, default=['Original','Tumor-only','Parenchyma-only'])
+
     parser.add_argument('--masksize', type=list, default=[16,32,48,64], help='Size of area that will be blocked using Otsu or DropBlock')
     parser.add_argument('--classes', type=list, default=['Benign','Malignant'])
 
     # Optimizer Arguments
     parser.add_argument('--loss', type=str, default='entropy')
     parser.add_argument('--optim', type=str, default='Adam')
-    parser.add_argument('--epochs', type=int, default=75)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--epochs', type=int, default=150)
+    parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--betas',type=tuple, default=(0.9,0.999))
     parser.add_argument('--rho',type=float, default=0.9)
-    parser.add_argument('--eps', type=float, default=1e-15)
-    parser.add_argument('--decay', type=float, default=0.001)
+    parser.add_argument('--eps', type=float, default=1e-7)
+    parser.add_argument('--decay', type=float, default=0.0001)
     parser.add_argument('--momentum', type=float, default=0.99)
     # Experiment Flags
-    parser.add_argument('--composites', type=bool, default=True, help='Create Composite Images of false negatives, false positives, etc...')
     parser.add_argument('--bestmodel', type=bool, default=True, help='Evaluate Best Model')
     parser.add_argument('--standards', type=bool, default=False, help='Evaluate Cherry Picked Images')
     parser.add_argument('--features', type=bool, default=False, help='Not Implemented')

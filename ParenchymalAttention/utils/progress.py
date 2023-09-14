@@ -39,7 +39,8 @@ class ProgressBar():
         percent = float(epoch) / max_epoch
         arrow = self.chr * int(round(percent * self.barlength)-1) + '>'
         spaces = ' ' * (self.barlength - len(arrow))
-        sys.stdout.write("\r Maskratio: {0}x | Fold {1}/{2} | Rep: {3}/{4} | Batch: {5}/{6} [{7}] {8}%".format(
+        sys.stdout.write("\r Method: {0}, Maskratio: {1}x | Fold {2}/{3} | Rep: {4}/{5} | Batch: {6}/{7} [{8}] {9}%".format(
+                                                                                self.methodname,
                                                                                 self.maskratio,
                                                                                 self.fold+1, 
                                                                                 self.maxfold,
