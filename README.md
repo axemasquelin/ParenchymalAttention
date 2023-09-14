@@ -16,18 +16,7 @@ Review [requirements.txt](/ParenchymalAttention/requirements.txt) for necessary 
 
 ---
 ## Getting Started:
-### Training a Model from Scratch:
-```
-./ParenchymalAttention/ $ python main.py --config /config/training.yaml
-```
-### Training a Model from Existing network:
-```
-Not available at this time (check back later :p)
-```
-### Evaluating a Model on New data:
-```
-./ParenchymalAttention/ $ python main.py --config /config/training.yaml
-```
+
 ---
 ## Components
 ### [Config:](/ParenchymalAttention/configs/)
