@@ -38,7 +38,7 @@ Folder designed to contain **.sh** filetypes in order to allow rapid deployment 
 &emsp; (4) ```nrrdtopng.py``` Converts Nrrd files to pngs, this file is obsolet as ```/data/dataloader.py``` prioritizes csv files and tiff   files.
 
 ### [Networks:](/ParenchymalAttention/ParenchymalAttention/networks/)
-Folder contains designated network architectures to evaluate model. Exisiting architecture include a ```MobileNetV1```, and a custom ```Miniception``` module. The network reported in literature is the ```Miniception``` module and is designed as a custom medical neural network. Large off the shelf DNNs do not work well for specific medical tasks and therefore custom built networks that bypass the need for transfer learning show equal or better performance (See Transfusion: Understanding Transfer Learning for Medical Imaging paper for a more comprehensive analysis of the current issues in medical datasets)
+Folder contains designated network architectures to evaluate model. Exisiting architecture include a ```MobileNetV1```, and a custom ```Miniception``` module. The network reported in literature is the ```Miniception``` module and is designed as a custom medical neural network. Large off the shelf DNNs do not work well for specific medical tasks and therefore custom built networks that bypass the need for transfer learning show equal or better performance (See [Transfusion: Understanding Transfer Learning for Medical Imaging paper](https://proceedings.neurips.cc/paper_files/paper/2019/file/eb1e78328c46506b46a4ac4a1e378b91-Paper.pdf) for a more comprehensive analysis of the current issues in medical datasets)
 
 ### [data:](/ParenchymalAttention/ParenchymalAttention/data/)
 Contains preprocessing and dataloader functions;  
