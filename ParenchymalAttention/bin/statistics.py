@@ -53,7 +53,6 @@ def multitest_stats(df):
 
 
 def annotatefig(sig, x1, x2, y, h):
-    print(sig)
     if sig < 0.05:
         if (sig < 0.05 and sig > 0.01):
             sigtext = '*'
@@ -87,11 +86,11 @@ def violin_plots(df, metric, methods,
     chart.set_xticklabels(chart.get_xticklabels(), rotation=25, horizontalalignment='right')
     plt.xlabel("Dataset", fontsize = 14)
 
-    if metric == 'AUC':
+    if metric == 'auc':
         plt.title(metric.upper() + " Distribution", fontweight="bold", pad = 20)
-        plt.yticks([0.5,0.6,.7,.8,.9,1], fontsize=15)
+        plt.yticks(np.arange(0.7,1,0.05), fontsize=12)
         plt.ylabel(metric.upper(), fontsize = 16)
-        plt.ylim(0.45,1.07)
+        plt.ylim(0.65,0.95)
     else:
         plt.title(metric.capitalize() + " Distribution", fontweight="bold")
         plt.ylabel(metric.capitalize(), fontsize = 16)
@@ -102,17 +101,17 @@ def violin_plots(df, metric, methods,
 
     if sig1 != None:
         x1, x2 = 0, 1                           # 0i vs. 10b/10ib
-        y, h, col = .985, .0025, 'k'
+        y, h, col = .925, .0025, 'k'
         annotatefig(sig1, x1, x2, y, h)
 
     if sig2 != None:
         x1, x2 = 0, 2                           # 0i vs. 15b/15ib
-        y, h, col = 1.015, .0025, 'k'
+        y, h, col = 0.945, .0025, 'k'
         annotatefig(sig2, x1, x2, y, h)
 
     if sig3 != None:
         x1, x2 = 1, 2                            # 10b/10ib vs 15b/15ib
-        y, h, col = 0.993, .0025, 'k'
+        y, h, col = 0.93, .0025, 'k'
         annotatefig(sig3, x1, x2, y, h)
 
     result_dir = os.getcwd() + "/results/"
@@ -145,7 +144,6 @@ if __name__ == '__main__':
     # Variable Flags
     create_violin = True
     check_stats = True
-    print(os.path.split(os.getcwd()))
     
     for metric in metrics:
         print(metric)
@@ -170,7 +168,6 @@ if __name__ == '__main__':
                                     for l in range(len(row)-1):
                                         mean_.append(float(row[l+1]))
                             df[header] = np.transpose(mean_)
-                            print(header)
                             if metric == 'auc':
                                 if (header == 'Original'):
                                     np_orig = np.loadtxt(open(filename, "rb"), delimiter=",", skiprows=1)
@@ -183,10 +180,8 @@ if __name__ == '__main__':
     
         
         df = df[cols]
-        print(df)
         if check_stats:
             sigs = multitest_stats(df)
-            print(sigs)
             
         if create_violin:
             print("Violin Plots")
@@ -197,10 +192,12 @@ if __name__ == '__main__':
 
         # if metric == 'auc':
         print("Original Mean: ", df['Original'].mean())
-        print("Tumor-Only Mean: ", df["Tumor-only"].mean())
-        print("Parenchyma-Only Mean: ", df["Parenchyma-only"].mean())
-        
         print("Original STD: ", df['Original'].std())
+        print("Tumor-Only Mean: ", df["Tumor-only"].mean())
         print("Tumor-Only STD: ", df["Tumor-only"].std())
+        print("Parenchyma-Only Mean: ", df["Parenchyma-only"].mean())
         print("Parenchyma-Only STD: ", df["Parenchyma-only"].std())
+        
+        
+        
                 
