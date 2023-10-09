@@ -33,7 +33,7 @@ Review [requirements.txt](/ParenchymalAttention/requirements.txt) for necessary 
 ### [bin:](/ParenchymalAttention/ParenchymalAttention/bin/)
 Folder designed to contain **.sh** filetypes in order to allow rapid deployment of experiments to benchmark networks. Additionally, ```bin``` contains the following preprocessing code to generate necessary data from the NLST:  
 &emsp; (1) ```cleandata.py``` matches original NLST LDCTs files with    segmentation maps. Will search for all matching PIDs and generate a csv file of all matching segmentation files and original LDCT for torch dataloader.  
-&emsp; (2) ```pid_analys.py``` Provides Demographic data for PIDs present in true-positives/negatives and false-positives/negatives.   
+&emsp; (2) ```pid_analysis.py``` Provides Demographic data for PIDs present in true-positives/negatives and false-positives/negatives.   
 &emsp; (3) ```statistics.py``` Conducts a Bonferroni correction on statistical analysis alongside a Welsh and Levene test.  
 &emsp; (4) ```nrrdtopng.py``` Converts Nrrd files to pngs, this file is obsolet as ```/data/dataloader.py``` prioritizes csv files and tiff   files.
 
