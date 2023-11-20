@@ -46,8 +46,6 @@ Contains preprocessing and dataloader functions;
 &emsp;(2) ```preprocess.py``` applies a requested Standardization/Normalization protocol to the images. Normalization was utilized for the reported results in manuscript. 
 ### [Utils:](/ParenchymalAttention/ParenchymalAttention/utils/)
 Folder containing all utility function for visualization of results, saving networks, loading networks
-### [results:](/ParenchymalAttention/results)
-Results from experiments. 
 ----
 ## Citation:
 ```
