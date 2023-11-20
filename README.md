@@ -2,25 +2,14 @@
 # Non-small Cell Lung Cancer - Parenchymal Attention
 Welcome to [ParenchymalAttention](/ParenchymalAttention/). This project is designed to evaluate the level of attention a neural network places on features present in a region of interest for LDCT images. For any inquires regarding data or issues regarding running this code contact the corresponding author [Axel Masquelin](amasquelin@bwh.harvard.edu)  
 
+## Scratch Branch:
+This branch is designed as a playground for further improving this project post publication. 
+
 ## Table of Contents
-- [Abstract:](#abstract)
 - [Requirements:](#requirements)
 - [Getting Started:](#getting-started)
 - [Components:](#components)
 - [Citation:](#citation)
-
-
-## Abstract: 
-#### BACKGROUND:
-Continued improvement in deep learning methodologies has increased the rate at which deep neural networks are being evaluated for medical applications, including diagnosis of lung cancer. However, there has been limited exploration of the underlying features networks use to identify lung cancer from computed tomography (CT) images. 
-#### OBJECTIVE:
-In this study, we used combination of perturbation methodologies and saliency activation maps to systematically explore the contributions of both parenchymal and tumor regions in a CT image to the classification of indeterminate lung nodules.
-METHODS:
-We selected individuals from the National Lung Screening Trial (NLST) with solid pulmonary nodules 4 – 20 mm in diameter. Segmentation masks were used to generate three distinct datasets; 1) an Original Dataset containing the complete low-dose CT scans from the NLST, 2) a Parenchyma-Only Dataset in which the tumor regions were covered by a mask, and 3) a Tumor-Only Dataset in which only the tumor regions were included.
-#### RESULTS:
-The Original Dataset significantly outperformed the Parenchyma-Only Dataset and the Tumor-Only Dataset with an AUC of 81.38 ± 3.68% compared to 77.56 ± 4.42% and 77.56 ± 3.62%, respectively. Gradient-weighted class activation mapping (Grad-CAM) of the Original Dataset showed increased attention was being given to the nodule and the tumor-parenchyma boundary when nodules were classified as malignant. In the case of benign nodules, increased network attention to distant parenchymal structures, such as vasculature, emphysema, or fibrotic tissues was observed. This pattern of attention remained unchanged in the case of the Parenchyma-Only Dataset. Nodule size and first-order statistical features of the nodules were significantly different with the average malignant and benign nodule maximum 3d diameter being 23mm and 12mm, respectively. In the case of the Parenchyma-Only dataset, benign nodules were shown to be more spherical, 0.53, when compared to malignant, 0.44.
-##### CONCLUSION:
-We conclude that network performance is linked to textural features of nodules such as kurtosis, entropy and intensity, as well as morphological features such as sphericity and diameter. Furthermore, textural features are more positively associated with malignancy than morphologies features. 
 
 
 ## Requirements: 
