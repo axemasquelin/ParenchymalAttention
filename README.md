@@ -2,6 +2,9 @@
 # Non-small Cell Lung Cancer - Parenchymal Attention
 Welcome to [ParenchymalAttention](/ParenchymalAttention/). This project is designed to evaluate the level of attention a neural network places on features present in a region of interest for LDCT images. For any inquires regarding data or issues regarding running this code contact the corresponding author [Axel Masquelin](amasquelin@bwh.harvard.edu)  
 
+## Scratch Branch:
+This branch should not be modified. Intended as a permanent version to be associated with published manuscript. It will be updated once manuscript is published (Currently under review).
+
 ## Table of Contents
 - [Abstract:](#abstract)
 - [Requirements:](#requirements)
