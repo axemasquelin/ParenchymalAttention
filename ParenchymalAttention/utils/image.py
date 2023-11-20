@@ -214,11 +214,9 @@ def saveImageCam(image, cam, confidence, label, pred, method, ms = None, title=N
     if ms != None:
         plt.savefig(resultpath + method  + str(ms) + 'x' + folder + title + '_PLTattention.png')
         cv2.imwrite(resultpath + method + str(ms) + 'x' + folder + title + '_attention.png', overlay)
-        cv2.imwrite(resultpath + method + str(ms) + 'x' + folder + title + '_original.png', im*255)
 
     else:
         plt.savefig(resultpath + method + folder + title + '_PLTattention.png')
         cv2.imwrite(resultpath + method + folder + title + '_attention.png', overlay)
-        cv2.imwrite(resultpath + method + folder + title + '_original.png', im*255)
         
     plt.close()
